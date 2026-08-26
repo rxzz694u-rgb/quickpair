@@ -32,7 +32,7 @@ export const App: React.FC = () => {
         // Root page
         const params = new URLSearchParams(window.location.search);
         const tabParam = params.get('tab') as InfoModalTab;
-        if (tabParam && ['about', 'privacy', 'terms', 'faq'].includes(tabParam)) {
+        if (tabParam && ['about', 'privacy', 'terms', 'faq', 'contact'].includes(tabParam)) {
           setInfoModalTab(tabParam);
         }
       } else if (rawPath === '/faq') {
@@ -41,6 +41,8 @@ export const App: React.FC = () => {
         setInfoModalTab('privacy');
       } else if (rawPath === '/terms') {
         setInfoModalTab('terms');
+      } else if (rawPath === '/contact') {
+        setInfoModalTab('contact');
       } else if (rawPath === '/how-it-works' || rawPath === '/about') {
         setInfoModalTab('about');
       } else {

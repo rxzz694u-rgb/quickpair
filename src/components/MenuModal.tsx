@@ -11,6 +11,7 @@ import {
   Info,
   HelpCircle,
   FileCheck,
+  Mail,
 } from 'lucide-react';
 import { sounds } from '../services/audio';
 import { peerSync } from '../services/peerSync';
@@ -81,7 +82,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
           <h2 className="text-[16px] font-semibold text-text-primary">Menu</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-text-secondary hover:text-text-primary transition-colors"
+            className="p-1 rounded-lg text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -94,7 +95,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
           {/* How it works */}
           <button
             onClick={() => handleOpenTab('about')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2.5">
               <Info className="w-4 h-4 text-text-secondary" />
@@ -106,7 +107,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
           {/* Privacy */}
           <button
             onClick={() => handleOpenTab('privacy')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2.5">
               <ShieldCheck className="w-4 h-4 text-accent" />
@@ -118,7 +119,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
           {/* Terms of Service */}
           <button
             onClick={() => handleOpenTab('terms')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2.5">
               <FileCheck className="w-4 h-4 text-text-secondary" />
@@ -129,7 +130,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
           {/* FAQ */}
           <button
             onClick={() => handleOpenTab('faq')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2.5">
               <HelpCircle className="w-4 h-4 text-text-secondary" />
@@ -137,12 +138,24 @@ export const MenuModal: React.FC<MenuModalProps> = ({
             </span>
           </button>
 
+          {/* Contact & Support */}
+          <button
+            onClick={() => handleOpenTab('contact')}
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-2.5">
+              <Mail className="w-4 h-4 text-accent" />
+              <span>Contact &amp; Support</span>
+            </span>
+            <span className="text-[11px] text-accent font-medium">Get in touch</span>
+          </button>
+
           <div className="border-t border-border-light my-1" />
 
           {/* Theme switcher */}
           <button
             onClick={handleToggleTheme}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2.5">
               {theme === 'dark' ? <Moon className="w-4 h-4 text-text-primary" /> : <Sun className="w-4 h-4 text-amber-500" />}
@@ -154,7 +167,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
           {/* Audio toggle */}
           <button
             onClick={handleToggleSound}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2.5">
               {isMuted ? <VolumeX className="w-4 h-4 text-text-secondary" /> : <Volume2 className="w-4 h-4 text-text-primary" />}
@@ -170,7 +183,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
               onClose();
               onOpenSecretNote();
             }}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2.5">
               <Lock className="w-4 h-4 text-text-primary" />
@@ -181,7 +194,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
           {/* Clear space */}
           <button
             onClick={handleClearAll}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-red-500/10 text-red-500 transition-colors"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-red-500/10 text-red-500 transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2.5">
               <Trash2 className="w-4 h-4" />

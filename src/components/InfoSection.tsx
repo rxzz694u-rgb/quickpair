@@ -48,6 +48,12 @@ export const InfoSection: React.FC<InfoSectionProps> = ({ onOpenInfo }) => {
         >
           FAQ
         </button>
+        <button
+          onClick={(e) => handleClick(e, 'contact')}
+          className="hover:text-text-primary transition-colors py-1 cursor-pointer text-accent font-medium"
+        >
+          Contact
+        </button>
       </div>
 
       <span className="text-[11px] text-text-muted">© 2026 QuickPair</span>

@@ -22,6 +22,7 @@ export default defineConfig({
         privacy: path.resolve(__dirname, 'privacy/index.html'),
         terms: path.resolve(__dirname, 'terms/index.html'),
         howItWorks: path.resolve(__dirname, 'how-it-works/index.html'),
+        contact: path.resolve(__dirname, 'contact/index.html'),
       },
     },
   },

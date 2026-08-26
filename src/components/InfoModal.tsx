@@ -13,10 +13,16 @@ import {
   FileCheck,
   Clock,
   Lock,
+  Mail,
+  Copy,
+  Check,
+  HelpCircle,
+  ExternalLink,
+  Send,
 } from 'lucide-react';
 import { sounds } from '../services/audio';
 
-export type InfoModalTab = 'about' | 'privacy' | 'terms' | 'faq';
+export type InfoModalTab = 'about' | 'privacy' | 'terms' | 'faq' | 'contact';
 
 interface InfoModalProps {
   isOpen: boolean;
@@ -31,10 +37,12 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<InfoModalTab>(initialTab);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [copiedItem, setCopiedItem] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setActiveTab(initialTab);
+      setCopiedItem(null);
     }
   }, [isOpen, initialTab]);
 
@@ -43,6 +51,13 @@ export const InfoModal: React.FC<InfoModalProps> = ({
   const toggleFaq = (idx: number) => {
     sounds.playClick();
     setOpenFaq(openFaq === idx ? null : idx);
+  };
+
+  const handleCopyText = (text: string, key: string) => {
+    sounds.playCopy();
+    navigator.clipboard.writeText(text);
+    setCopiedItem(key);
+    setTimeout(() => setCopiedItem(null), 2000);
   };
 
   const faqs = [
@@ -92,7 +107,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                 sounds.playClick();
                 setActiveTab('about');
               }}
-              className={`px-2.5 sm:px-3 py-1 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
+              className={`px-2.5 sm:px-3 py-1 text-xs font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === 'about'
                   ? 'bg-card text-text-primary shadow-sm'
                   : 'text-text-secondary hover:text-text-primary'
@@ -105,7 +120,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                 sounds.playClick();
                 setActiveTab('privacy');
               }}
-              className={`px-2.5 sm:px-3 py-1 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
+              className={`px-2.5 sm:px-3 py-1 text-xs font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === 'privacy'
                   ? 'bg-card text-text-primary shadow-sm'
                   : 'text-text-secondary hover:text-text-primary'
@@ -118,7 +133,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                 sounds.playClick();
                 setActiveTab('terms');
               }}
-              className={`px-2.5 sm:px-3 py-1 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
+              className={`px-2.5 sm:px-3 py-1 text-xs font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === 'terms'
                   ? 'bg-card text-text-primary shadow-sm'
                   : 'text-text-secondary hover:text-text-primary'
@@ -131,7 +146,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                 sounds.playClick();
                 setActiveTab('faq');
               }}
-              className={`px-2.5 sm:px-3 py-1 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
+              className={`px-2.5 sm:px-3 py-1 text-xs font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === 'faq'
                   ? 'bg-card text-text-primary shadow-sm'
                   : 'text-text-secondary hover:text-text-primary'
@@ -139,11 +154,24 @@ export const InfoModal: React.FC<InfoModalProps> = ({
             >
               FAQ
             </button>
+            <button
+              onClick={() => {
+                sounds.playClick();
+                setActiveTab('contact');
+              }}
+              className={`px-2.5 sm:px-3 py-1 text-xs font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                activeTab === 'contact'
+                  ? 'bg-card text-text-primary shadow-sm'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              Contact
+            </button>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-text-secondary hover:text-text-primary transition-colors flex-shrink-0"
+            className="p-1 rounded-lg text-text-secondary hover:text-text-primary transition-colors flex-shrink-0 cursor-pointer"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -317,7 +345,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                     >
                       <button
                         onClick={() => toggleFaq(idx)}
-                        className="w-full p-3 text-left flex items-center justify-between gap-3 text-xs sm:text-sm font-medium text-text-primary min-h-[42px]"
+                        className="w-full p-3 text-left flex items-center justify-between gap-3 text-xs sm:text-sm font-medium text-text-primary min-h-[42px] cursor-pointer"
                       >
                         <span className="pr-1 leading-snug">{faq.q}</span>
                         <ChevronDown
@@ -335,6 +363,106 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* 5. ONLY 2 CLEAN SVG ICONS: EMAIL & INSTAGRAM */}
+          {activeTab === 'contact' && (
+            <div className="space-y-4 animate-fade py-2">
+              <div>
+                <h3 className="text-[18px] font-bold text-text-primary tracking-tight">
+                  Contact
+                </h3>
+                <p className="text-xs sm:text-sm text-text-secondary mt-1 leading-relaxed">
+                  Reach out directly for support, feedback, or inquiries.
+                </p>
+              </div>
+
+              {/* 2 Clean SVG Icon Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                
+                {/* 1. Email Card */}
+                <div className="p-4 rounded-2xl bg-subtle border border-border flex flex-col justify-between space-y-4 hover:border-accent/40 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center text-accent shadow-sm">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect width="20" height="16" x="2" y="4" rx="2" />
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-text-primary">Email</p>
+                      <p className="text-[11px] font-mono text-text-secondary select-all mt-0.5">heyquickpair@gmail.com</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleCopyText('heyquickpair@gmail.com', 'email')}
+                      className="flex-1 py-1.5 text-xs font-medium rounded-xl bg-card border border-border text-text-primary hover:bg-hover flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm active:scale-95"
+                    >
+                      {copiedItem === 'email' ? <Check className="w-3.5 h-3.5 text-accent" /> : <Copy className="w-3.5 h-3.5 text-text-secondary" />}
+                      <span>{copiedItem === 'email' ? 'Copied' : 'Copy'}</span>
+                    </button>
+                    <a
+                      href="mailto:heyquickpair@gmail.com"
+                      className="flex-1 py-1.5 text-xs font-medium rounded-xl bg-card border border-border text-text-primary hover:bg-hover flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm active:scale-95"
+                    >
+                      <Send className="w-3.5 h-3.5 text-text-secondary" />
+                      <span>Send</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* 2. Instagram Card */}
+                <div className="p-4 rounded-2xl bg-subtle border border-border flex flex-col justify-between space-y-4 hover:border-pink-500/40 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center text-pink-500 shadow-sm">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <rect width="18" height="18" x="3" y="3" rx="5" />
+                        <circle cx="12" cy="12" r="4" />
+                        <circle cx="17.2" cy="6.8" r="0.75" fill="currentColor" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-text-primary">Instagram</p>
+                      <p className="text-[11px] text-text-secondary select-all mt-0.5">@quickpair.app</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleCopyText('@quickpair.app', 'instagram')}
+                      className="flex-1 py-1.5 text-xs font-medium rounded-xl bg-card border border-border text-text-primary hover:bg-hover flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm active:scale-95"
+                    >
+                      {copiedItem === 'instagram' ? <Check className="w-3.5 h-3.5 text-accent" /> : <Copy className="w-3.5 h-3.5 text-text-secondary" />}
+                      <span>{copiedItem === 'instagram' ? 'Copied' : 'Copy'}</span>
+                    </button>
+                    <a
+                      href="https://instagram.com/quickpair.app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 py-1.5 text-xs font-medium rounded-xl bg-card border border-border text-text-primary hover:bg-hover flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm active:scale-95"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-text-secondary" />
+                      <span>Open</span>
+                    </a>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Cross Link to FAQ */}
+              <div className="flex items-center justify-center text-xs text-text-secondary pt-4 border-t border-border mt-4">
+                <button
+                  onClick={() => {
+                    sounds.playClick();
+                    setActiveTab('faq');
+                  }}
+                  className="text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5 cursor-pointer text-[12px]"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-accent" />
+                  <span>Looking for quick answers? Browse our FAQ</span>
+                </button>
               </div>
             </div>
           )}
