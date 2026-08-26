@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#F7F7F5" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="QuickPair" />
+    <meta name="application-name" content="QuickPair" />
+    
+    <!-- Primary Meta Tags -->
+    <title>QuickPair — Instant Local &amp; Remote Device Sharing</title>
+    <meta name="title" content="QuickPair — Instant Local &amp; Remote Device Sharing" />
+    <meta name="description" content="Move anything between your devices instantly. Share text, links, notes, and files over local Wi-Fi or 4G/5G remote rooms with zero cloud uploads, no account, and no app required." />
+    <meta name="keywords" content="QuickPair, file sharing, local network share, clipboard sync, send text across devices, airDrop alternative, p2p file transfer, zero cloud sharing, PWA" />
+    <meta name="author" content="QuickPair" />
+    <link rel="canonical" href="https://quickpair.app/" />
+
+    <!-- Open Graph / Facebook / LinkedIn Previews -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://quickpair.app/" />
+    <meta property="og:site_name" content="QuickPair" />
+    <meta property="og:title" content="QuickPair — Instant Local &amp; Remote Device Sharing" />
+    <meta property="og:description" content="Move anything between your devices instantly. Share text, links, and files with zero cloud uploads, no account, and no app required." />
+    <meta property="og:image" content="https://quickpair.app/og-preview.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="QuickPair — Minimal local device sharing interface" />
+
+    <!-- Twitter Previews -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://quickpair.app/" />
+    <meta name="twitter:title" content="QuickPair — Instant Local &amp; Remote Device Sharing" />
+    <meta name="twitter:description" content="Move anything between your devices instantly. Share text, links, and files with zero cloud uploads, no account, and no app required." />
+    <meta name="twitter:image" content="https://quickpair.app/og-preview.svg" />
+
+    <!-- JSON-LD Structured Data for WebApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "QuickPair",
+      "url": "https://quickpair.app/",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "All",
+      "description": "Instant peer-to-peer device sharing utility. Transfer text, links, code snippets, and files over local Wi-Fi or encrypted remote rooms with zero cloud uploads and no account required.",
+      "browserRequirements": "Requires any modern web browser with WebRTC/BroadcastChannel support",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
+
+    <!-- Immediate Light Theme Baseline (FOUC prevention) -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('quickpair_theme');
+          if (saved === 'dark') {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.style.backgroundColor = '#121214';
+            document.documentElement.style.color = '#F3F3F5';
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-theme', 'light');
+            document.documentElement.style.backgroundColor = '#F7F7F5';
+            document.documentElement.style.color = '#111111';
+          }
+        } catch(e) {}
+      })();
+    </script>
+    
+    <!-- Clean System Fonts & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-background text-text-primary antialiased min-h-screen overscroll-none">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- PWA Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').catch(function() {});
+        });
+      }
+    </script>
+  </body>
+</html>

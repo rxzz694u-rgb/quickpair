@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#F7F7F5" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="QuickPair" />
+    
+    <title>How It Works — QuickPair</title>
+    <meta name="title" content="How It Works — QuickPair" />
+    <meta name="description" content="Move text, links, photos and files between your devices without cables, apps, or accounts. Discover local network automatic pairing and 4G/5G remote room codes." />
+    <link rel="canonical" href="https://quickpair.app/how-it-works/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://quickpair.app/how-it-works/" />
+    <meta property="og:site_name" content="QuickPair" />
+    <meta property="og:title" content="How It Works — QuickPair" />
+    <meta property="og:description" content="Learn how QuickPair moves text, links, photos and files between your devices without cables, apps, or accounts." />
+    <meta property="og:image" content="https://quickpair.app/og-preview.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="QuickPair — How It Works Overview" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://quickpair.app/how-it-works/" />
+    <meta name="twitter:title" content="How It Works — QuickPair" />
+    <meta name="twitter:description" content="Learn how QuickPair moves text, links, photos and files between your devices without cables, apps, or accounts." />
+    <meta name="twitter:image" content="https://quickpair.app/og-preview.svg" />
+
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('quickpair_theme');
+          if (saved === 'dark') {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.style.backgroundColor = '#121214';
+            document.documentElement.style.color = '#F3F3F5';
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-theme', 'light');
+            document.documentElement.style.backgroundColor = '#F7F7F5';
+            document.documentElement.style.color = '#111111';
+          }
+        } catch(e) {}
+      })();
+    </script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-background text-text-primary antialiased min-h-screen overscroll-none">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

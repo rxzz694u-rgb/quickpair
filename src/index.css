@@ -1,0 +1,288 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root, html {
+    --bg-page: #F7F7F5;
+    --bg-card: #FFFFFF;
+    --bg-subtle: #F4F4F2;
+    --bg-hover: #EBEBE8;
+    --text-main: #111111;
+    --text-muted: #737373;
+    --text-subtle: #8E8E93;
+    --border-main: #E7E7E7;
+    --border-light: #F0F0F0;
+    --accent: #10B981;
+    --accent-light: #E6F7F0;
+    --accent-hover: #059669;
+    --grid-line: rgba(0, 0, 0, 0.022); /* Ultra-low subtle opacity in light mode */
+  }
+
+  html.dark, body.dark, [data-theme="dark"], .dark {
+    --bg-page: #121214;
+    --bg-card: #1C1C1F;
+    --bg-subtle: #242428;
+    --bg-hover: #2C2C32;
+    --text-main: #F3F3F5;
+    --text-muted: #9E9EA4;
+    --text-subtle: #68686E;
+    --border-main: #2C2C30;
+    --border-light: #242428;
+    --accent: #10B981;
+    --accent-light: rgba(16, 185, 129, 0.15);
+    --accent-hover: #34D399;
+    --grid-line: rgba(255, 255, 255, 0.018); /* Ultra-low subtle opacity in dark mode */
+  }
+
+  html, body {
+    background-color: var(--bg-page);
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-top: env(safe-area-inset-top);
+  }
+
+  * {
+    border-color: var(--border-main);
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+
+  /* Prevent text zoom on iOS inputs */
+  input, textarea, select, button {
+    font-size: 16px;
+  }
+
+  @media (min-width: 640px) {
+    input, textarea, select, button {
+      font-size: 14px;
+    }
+  }
+
+  /* Subtle scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-main);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
+}
+
+/* Ambient Slow Grid Drift Animation */
+@keyframes gridDrift {
+  0% {
+    background-position: 0px 0px;
+  }
+  100% {
+    background-position: 56px 56px;
+  }
+}
+
+/* Ultra-low opacity graph line grid pattern with silky motion */
+.bg-graph-pattern {
+  background-image: 
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 28px 28px;
+  animation: gridDrift 60s linear infinite;
+  will-change: background-position;
+}
+
+/* iOS Bottom Sheet Animations */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-sheet-up {
+  animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade {
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+/* Typing Bouncing Dot Animation */
+@keyframes typingDot {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.animate-dot-1 {
+  animation: typingDot 1.2s infinite ease-in-out 0s;
+}
+
+.animate-dot-2 {
+  animation: typingDot 1.2s infinite ease-in-out 0.2s;
+}
+
+.animate-dot-3 {
+  animation: typingDot 1.2s infinite ease-in-out 0.4s;
+}
+
+/* Live Sync Pulse Ring */
+@keyframes radarPulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.animate-radar-ring {
+  animation: radarPulse 2s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+}
+
+/* Item entrance animation */
+@keyframes itemEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-item-enter {
+  animation: itemEntrance 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* QuickPair Logo Ambient Smooth Animations */
+@keyframes logoPulseWave {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes logoBeam {
+  0%, 100% {
+    stroke-dashoffset: 0;
+    opacity: 0.7;
+  }
+  50% {
+    stroke-dashoffset: -8;
+    opacity: 1;
+  }
+}
+
+@keyframes logoGentleFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-1.5px);
+  }
+}
+
+.animate-logo-wave {
+  animation: logoPulseWave 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.animate-logo-beam {
+  animation: logoBeam 2.5s ease-in-out infinite;
+}
+
+.animate-logo-float {
+  animation: logoGentleFloat 4s ease-in-out infinite;
+}
+
+/* QuickPair Text Shimmer and Smooth Breathing Animation */
+@keyframes textShimmer {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+@keyframes textGlowPulse {
+  0%, 100% {
+    text-shadow: 0 0 0px rgba(16, 185, 129, 0);
+    filter: drop-shadow(0 0 0px rgba(16, 185, 129, 0));
+  }
+  50% {
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+    filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.3));
+  }
+}
+
+@keyframes textLetterFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-1px);
+  }
+}
+
+.animate-quickpair-shimmer {
+  background: linear-gradient(
+    110deg,
+    var(--text-main) 0%,
+    var(--text-main) 40%,
+    #10B981 50%,
+    var(--text-main) 60%,
+    var(--text-main) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: textShimmer 6s ease-in-out infinite;
+}
+
+.animate-pair-glow {
+  animation: textGlowPulse 3.5s ease-in-out infinite;
+}
+
+.animate-text-float {
+  animation: textLetterFloat 3.5s ease-in-out infinite;
+}

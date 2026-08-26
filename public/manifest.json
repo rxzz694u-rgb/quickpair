@@ -1,0 +1,26 @@
+{
+  "name": "QuickPair — Instant Device Sharing",
+  "short_name": "QuickPair",
+  "description": "Send text, links, and files to your other devices with zero cloud uploads.",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#F7F7F5",
+  "theme_color": "#F7F7F5",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/og-preview.svg",
+      "sizes": "1200x630",
+      "type": "image/svg+xml"
+    }
+  ]
+}
