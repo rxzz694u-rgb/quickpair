@@ -2,22 +2,22 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyD90hrbD1GhLRlFIKDamTASp9F-eDj_M6M',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'quickpair-9a302.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'quickpair-9a302',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'quickpair-9a302.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '1084407085446',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:1084407085446:web:fbb822d9af329736f21407',
 };
 
-// Check if Firebase is properly configured with environment variables
+// Check if Firebase is properly configured with environment variables or fallback
 export const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey &&
   firebaseConfig.projectId &&
   firebaseConfig.appId
 );
 
-// Initialize Firebase app if configured, otherwise fallback to existing app
+// Initialize Firebase app if not already initialized
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Cloud Firestore and export instance
