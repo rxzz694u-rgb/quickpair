@@ -4,7 +4,6 @@ import {
   VolumeX,
   Trash2,
   Lock,
-  ShieldCheck,
   X,
   Sun,
   Moon,
@@ -67,22 +66,18 @@ export const MenuModal: React.FC<MenuModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-[2px] animate-fade">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-[3px] animate-fade">
       <div className="absolute inset-0" onClick={onClose} />
 
-      {/* Modal / Bottom Sheet */}
-      <div className="relative w-full max-w-sm bg-card rounded-t-[20px] sm:rounded-[16px] border-t sm:border border-border p-5 pb-8 sm:pb-5 shadow-sheet animate-sheet-up z-10 space-y-3">
-        
-        {/* Mobile handle */}
-        <div className="w-10 h-1.5 bg-[#D8D8D8] dark:bg-[#38383E] rounded-full mx-auto sm:hidden mb-1" />
+      <div className="relative w-full max-w-sm bg-card rounded-t-[28px] sm:rounded-3xl border-t sm:border border-border p-5 sm:p-6 shadow-2xl animate-sheet-up z-10 space-y-3.5">
+        <div className="w-12 h-1.5 bg-border rounded-full mx-auto sm:hidden mb-1" />
 
         {/* Header */}
-        <div className="flex items-center justify-between pb-2 border-b border-border">
-          <h2 className="text-[16px] font-semibold text-text-primary">Menu</h2>
+        <div className="flex items-center justify-between pb-2 border-b border-border/80">
+          <h2 className="text-[17px] font-bold text-text-primary">Options</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-text-muted hover:text-text-primary hover:bg-subtle transition-colors cursor-pointer"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -90,123 +85,96 @@ export const MenuModal: React.FC<MenuModalProps> = ({
         </div>
 
         {/* Action items */}
-        <div className="space-y-1.5 text-xs font-medium">
+        <div className="space-y-1.5 text-xs font-semibold">
           
-          {/* How it works */}
-          <button
-            onClick={() => handleOpenTab('about')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
-          >
-            <span className="flex items-center gap-2.5">
-              <Info className="w-4 h-4 text-text-secondary" />
-              <span>How it works</span>
-            </span>
-            <span className="text-[11px] text-text-secondary">No app · No cable</span>
-          </button>
-
-          {/* Privacy */}
-          <button
-            onClick={() => handleOpenTab('privacy')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
-          >
-            <span className="flex items-center gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-accent" />
-              <span>Privacy &amp; Security</span>
-            </span>
-            <span className="text-[11px] text-accent">Zero cloud</span>
-          </button>
-
-          {/* Terms of Service */}
-          <button
-            onClick={() => handleOpenTab('terms')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
-          >
-            <span className="flex items-center gap-2.5">
-              <FileCheck className="w-4 h-4 text-text-secondary" />
-              <span>Terms of Service</span>
-            </span>
-          </button>
-
-          {/* FAQ */}
-          <button
-            onClick={() => handleOpenTab('faq')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
-          >
-            <span className="flex items-center gap-2.5">
-              <HelpCircle className="w-4 h-4 text-text-secondary" />
-              <span>FAQ</span>
-            </span>
-          </button>
-
-          {/* Contact & Support */}
-          <button
-            onClick={() => handleOpenTab('contact')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
-          >
-            <span className="flex items-center gap-2.5">
-              <Mail className="w-4 h-4 text-accent" />
-              <span>Contact &amp; Support</span>
-            </span>
-            <span className="text-[11px] text-accent font-medium">Get in touch</span>
-          </button>
-
-          <div className="border-t border-border-light my-1" />
-
-          {/* Theme switcher */}
-          <button
-            onClick={handleToggleTheme}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
-          >
-            <span className="flex items-center gap-2.5">
-              {theme === 'dark' ? <Moon className="w-4 h-4 text-text-primary" /> : <Sun className="w-4 h-4 text-amber-500" />}
-              <span>Appearance</span>
-            </span>
-            <span className="text-text-secondary font-normal capitalize">{theme} mode</span>
-          </button>
-
-          {/* Audio toggle */}
-          <button
-            onClick={handleToggleSound}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
-          >
-            <span className="flex items-center gap-2.5">
-              {isMuted ? <VolumeX className="w-4 h-4 text-text-secondary" /> : <Volume2 className="w-4 h-4 text-text-primary" />}
-              <span>Sound feedback</span>
-            </span>
-            <span className="text-text-secondary font-normal">{isMuted ? 'Off' : 'On'}</span>
-          </button>
-
-          {/* Secret Note action */}
+          {/* Secret Note / Self-destruct */}
           <button
             onClick={() => {
               sounds.playClick();
               onClose();
               onOpenSecretNote();
             }}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/10 to-indigo-500/10 hover:from-purple-500/15 hover:to-indigo-500/15 text-text-primary border border-purple-500/20 transition-all cursor-pointer"
           >
-            <span className="flex items-center gap-2.5">
-              <Lock className="w-4 h-4 text-text-primary" />
-              <span>Create encrypted secret note</span>
+            <span className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-xl bg-purple-500 text-white flex items-center justify-center shadow-xs">
+                <Lock className="w-3.5 h-3.5" />
+              </div>
+              <span>Send Encrypted Note</span>
+            </span>
+            <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
+              Burn on read
             </span>
           </button>
 
-          {/* Clear space */}
+          {/* Sound toggle */}
+          <button
+            onClick={handleToggleSound}
+            className="w-full flex items-center justify-between p-3 rounded-2xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-3">
+              {isMuted ? <VolumeX className="w-4 h-4 text-text-muted" /> : <Volume2 className="w-4 h-4 text-emerald-500" />}
+              <span>Sound feedback</span>
+            </span>
+            <span className="text-[11px] text-text-muted">{isMuted ? 'Muted' : 'On'}</span>
+          </button>
+
+          {/* Theme toggle */}
+          <button
+            onClick={handleToggleTheme}
+            className="w-full flex items-center justify-between p-3 rounded-2xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-3">
+              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-text-muted" />}
+              <span>Theme</span>
+            </span>
+            <span className="text-[11px] text-text-muted capitalize">{theme}</span>
+          </button>
+
+          {/* How it works */}
+          <button
+            onClick={() => handleOpenTab('about')}
+            className="w-full flex items-center justify-between p-3 rounded-2xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-3">
+              <Info className="w-4 h-4 text-text-muted" />
+              <span>How it works</span>
+            </span>
+          </button>
+
+          {/* Privacy */}
+          <button
+            onClick={() => handleOpenTab('privacy')}
+            className="w-full flex items-center justify-between p-3 rounded-2xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-3">
+              <FileCheck className="w-4 h-4 text-text-muted" />
+              <span>Privacy &amp; Data</span>
+            </span>
+          </button>
+
+          {/* Contact */}
+          <button
+            onClick={() => handleOpenTab('contact')}
+            className="w-full flex items-center justify-between p-3 rounded-2xl bg-subtle hover:bg-hover text-text-primary transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-3">
+              <Mail className="w-4 h-4 text-[#FF5B37]" />
+              <span>Contact support</span>
+            </span>
+          </button>
+
+          {/* Clear all */}
           <button
             onClick={handleClearAll}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-subtle hover:bg-red-500/10 text-red-500 transition-colors cursor-pointer"
+            className="w-full flex items-center justify-between p-3 rounded-2xl bg-red-500/10 hover:bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/20 transition-colors cursor-pointer mt-1"
           >
-            <span className="flex items-center gap-2.5">
+            <span className="flex items-center gap-3">
               <Trash2 className="w-4 h-4" />
-              <span>Clear shared space</span>
+              <span>Clear current session</span>
             </span>
           </button>
-        </div>
 
-        {/* Footnote */}
-        <div className="pt-2 text-[11px] text-text-secondary flex items-center justify-center gap-1.5 border-t border-border">
-          <ShieldCheck className="w-3.5 h-3.5 text-accent" />
-          <span>Local Wi-Fi P2P · Zero cloud footprint</span>
         </div>
 
       </div>

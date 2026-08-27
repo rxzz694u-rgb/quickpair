@@ -87,26 +87,30 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background bg-graph-pattern text-text-primary flex flex-col font-sans selection:bg-accent-light selection:text-accent antialiased transition-colors">
-      {/* 1. Header: QuickPair ● 1 device [Sun/Moon] ••• */}
+    <div className="min-h-screen bg-background text-text-primary flex flex-col font-sans selection:bg-[#FF5B37]/15 selection:text-[#FF5B37] antialiased transition-colors relative overflow-x-hidden">
+      {/* Ambient Radial Lighting Glow (Inspired by CoreShift clean backdrop) */}
+      <div className="ambient-glow-top" />
+
+      {/* 1. Header: Floating Pill Navigation */}
       <HeaderMinimal
         peerCount={peers.length}
         onOpenDevices={() => setIsDeviceSheetOpen(true)}
         onOpenMenu={() => setIsMenuOpen(true)}
+        onOpenInfo={handleOpenInfo}
       />
 
-      {/* 2. Main Sharing Tool (Focused Utility) */}
-      <main className="flex-1 w-full flex flex-col">
-        {/* Compose Box */}
+      {/* 2. Main Sharing Tool (Hero Mesh + Composer + Clean Feed) */}
+      <main className="flex-1 w-full flex flex-col relative z-10">
+        {/* Compose Box & 3D Squircle Mesh Hero */}
         <Composer
           onOpenDevices={() => setIsDeviceSheetOpen(true)}
           peerCount={peers.length}
         />
 
-        {/* Recent Activity Feed */}
+        {/* Clean Activity Feed (Messages & Files Only) */}
         <RecentFeed items={items} />
 
-        {/* Minimal Footer with Quick Links */}
+        {/* Multi-Column Modern Footer with Giant Watermark */}
         <InfoSection onOpenInfo={handleOpenInfo} />
       </main>
 

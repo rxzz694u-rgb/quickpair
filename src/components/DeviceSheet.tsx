@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, X, Smartphone, Laptop, Tablet, Monitor } from 'lucide-react';
+import { Plus, X, Smartphone, Laptop, Tablet } from 'lucide-react';
 import { sounds } from '../services/audio';
 import { peerSync, PeerInfo } from '../services/peerSync';
 
@@ -33,25 +33,23 @@ export const DeviceSheet: React.FC<DeviceSheetProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-[2px] animate-fade">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-[3px] animate-fade">
       <div className="absolute inset-0" onClick={onClose} />
 
-      {/* Sheet Container */}
-      <div className="relative w-full max-w-sm bg-card rounded-t-[20px] sm:rounded-[16px] border-t sm:border border-border p-5 pb-8 sm:pb-5 shadow-sheet animate-sheet-up z-10 space-y-4">
+      <div className="relative w-full max-w-sm bg-card rounded-t-[28px] sm:rounded-3xl border-t sm:border border-border p-5 sm:p-6 shadow-2xl animate-sheet-up z-10 space-y-4">
         
         {/* Mobile Grab Handle */}
-        <div className="w-10 h-1.5 bg-[#D8D8D8] dark:bg-[#38383E] rounded-full mx-auto sm:hidden mb-2" />
+        <div className="w-12 h-1.5 bg-border rounded-full mx-auto sm:hidden mb-1" />
 
         {/* Header */}
-        <div className="flex items-center justify-between pb-2 border-b border-border">
+        <div className="flex items-center justify-between pb-2 border-b border-border/80">
           <div>
-            <h2 className="text-[16px] font-semibold text-text-primary">Connected devices</h2>
-            <p className="text-[11px] text-text-secondary font-mono mt-0.5">Room #{roomCode}</p>
+            <h2 className="text-[17px] font-bold text-text-primary">Connected devices</h2>
+            <p className="text-[12px] text-text-muted mt-0.5">Session: <span className="font-semibold text-text-primary">#{roomCode}</span></p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-text-secondary hover:text-text-primary"
+            className="p-1.5 rounded-full text-text-muted hover:text-text-primary hover:bg-subtle transition-colors"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -59,18 +57,20 @@ export const DeviceSheet: React.FC<DeviceSheetProps> = ({
         </div>
 
         {/* Device List */}
-        <div className="space-y-2 text-xs">
+        <div className="space-y-2.5 text-xs">
           {/* This device */}
-          <div className="p-3 rounded-[12px] bg-subtle border border-border flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              {renderDeviceIcon(thisDevice.type)}
+          <div className="p-3.5 rounded-2xl bg-subtle border border-border flex items-center justify-between shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-card border border-border flex items-center justify-center shadow-xs">
+                {renderDeviceIcon(thisDevice.type)}
+              </div>
               <div>
-                <p className="font-medium text-text-primary">{thisDevice.name}</p>
-                <p className="text-[11px] text-text-secondary">This device</p>
+                <p className="font-bold text-text-primary text-[13px]">{thisDevice.name}</p>
+                <p className="text-[11px] text-text-muted">This device</p>
               </div>
             </div>
-            <span className="flex items-center gap-1 text-[11px] text-accent font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+            <span className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Active
             </span>
           </div>
@@ -80,28 +80,30 @@ export const DeviceSheet: React.FC<DeviceSheetProps> = ({
             peers.map((peer) => (
               <div
                 key={peer.id}
-                className="p-3 rounded-[12px] bg-subtle border border-border flex items-center justify-between animate-fade"
+                className="p-3.5 rounded-2xl bg-subtle border border-border flex items-center justify-between animate-fade shadow-sm"
               >
-                <div className="flex items-center gap-2.5">
-                  {renderDeviceIcon(peer.type)}
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-card border border-border flex items-center justify-center shadow-xs">
+                    {renderDeviceIcon(peer.type)}
+                  </div>
                   <div>
-                    <p className="font-medium text-text-primary">{peer.name}</p>
-                    <p className="text-[11px] text-text-secondary">
-                      {peer.networkType === 'remote' ? 'Remote / Cellular' : 'Same Wi-Fi'}
+                    <p className="font-bold text-text-primary text-[13px]">{peer.name}</p>
+                    <p className="text-[11px] text-text-muted">
+                      {peer.networkType === 'wifi' ? 'Direct Local Wi-Fi' : 'Remote Mesh'}
                     </p>
                   </div>
                 </div>
-                <span className="flex items-center gap-1 text-[11px] text-accent font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                <span className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   Connected
                 </span>
               </div>
             ))
           ) : (
-            <div className="p-3.5 rounded-[12px] bg-subtle/70 border border-dashed border-border text-center space-y-1">
-              <p className="text-xs text-text-primary font-medium">No other devices connected yet</p>
-              <p className="text-[11px] text-text-secondary">
-                Scan QR or share your room code to connect your phone or laptop.
+            <div className="p-4 rounded-2xl bg-subtle/60 border border-dashed border-border text-center space-y-1">
+              <p className="text-xs text-text-primary font-semibold">No other devices connected yet</p>
+              <p className="text-[11px] text-text-muted leading-relaxed">
+                Open QuickPair on your phone or scan the QR code to pair instantly.
               </p>
             </div>
           )}
@@ -114,7 +116,7 @@ export const DeviceSheet: React.FC<DeviceSheetProps> = ({
             onClose();
             onOpenQR();
           }}
-          className="w-full py-3 sm:py-2.5 min-h-[44px] sm:min-h-0 rounded-[10px] bg-text-primary hover:opacity-90 active:opacity-80 text-background text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+          className="w-full py-3 rounded-2xl bg-[#0A0A0C] dark:bg-white text-white dark:text-[#0A0A0C] text-xs font-semibold flex items-center justify-center gap-2 shadow-md hover:opacity-90 active:scale-98 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Connect device / Scan QR</span>
