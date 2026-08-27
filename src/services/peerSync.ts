@@ -1,7 +1,21 @@
-// Real-time synchronization service for local network, E2EE, 5-day auto-expiring sessions, and multi-tab/remote mesh
+// Real-time synchronization service for local network, Firestore Cloud E2EE, 5-day auto-expiring sessions, and multi-device mesh
 
 import { EncryptedPayload, encryptRoomPacket, decryptRoomPacket, RoomEncryptedPacket } from './crypto';
 import { sounds } from './audio';
+import { db, isFirebaseConfigured } from './firebase';
+import {
+  collection,
+  doc,
+  setDoc,
+  deleteDoc,
+  onSnapshot,
+  getDocs,
+  writeBatch,
+  query,
+  orderBy,
+  limit,
+  Unsubscribe
+} from 'firebase/firestore';
 
 export type ItemType = 'text' | 'link' | 'code' | 'file' | 'secret';
 
@@ -63,6 +77,7 @@ class PeerSyncEngine {
   private isOnline: boolean = true;
   private originalTitle: string = 'QuickPair — Instant Local & Remote Device Sharing';
   private unreadCount: number = 0;
+  private firestoreUnsubs: Unsubscribe[] = [];
 
   constructor() {
     this.deviceId = 'dev_' + Math.random().toString(36).substring(2, 9);
@@ -104,6 +119,7 @@ class PeerSyncEngine {
 
       this.initStorage();
       this.initBroadcast();
+      this.initFirestore();
       this.initNetworkListeners();
       this.initFocusListener();
       this.initExpirationWatcher();
@@ -154,6 +170,7 @@ class PeerSyncEngine {
       this.isOnline = true;
       this.notifyNetwork();
       this.flushOfflineQueue();
+      this.sendHeartbeat();
     });
 
     window.addEventListener('offline', () => {
@@ -217,6 +234,140 @@ class PeerSyncEngine {
     } catch {}
   }
 
+  private unsubFirestore() {
+    this.firestoreUnsubs.forEach((unsub) => {
+      try {
+        unsub();
+      } catch {}
+    });
+    this.firestoreUnsubs = [];
+  }
+
+  // Firestore sync under /sessions/{sessionId}/
+  private initFirestore() {
+    if (typeof window === 'undefined' || !isFirebaseConfigured) return;
+
+    this.unsubFirestore();
+
+    try {
+      const sessionId = this.roomCode;
+
+      // 1. Listen to items at /sessions/{sessionId}/items/
+      const itemsRef = collection(db, 'sessions', sessionId, 'items');
+      const itemsQuery = query(itemsRef, orderBy('timestamp', 'desc'), limit(100));
+
+      const unsubItems = onSnapshot(
+        itemsQuery,
+        async (snapshot) => {
+          let hasNewIncoming = false;
+          let incomingSender = '';
+          let incomingType = 'item';
+
+          const remoteItems: SharedItem[] = [];
+          for (const docSnap of snapshot.docs) {
+            const data = docSnap.data();
+            if (data.encryptedPacket) {
+              try {
+                const decryptedStr = await decryptRoomPacket(data.encryptedPacket, this.roomCode);
+                const decryptedItem: SharedItem = JSON.parse(decryptedStr);
+                remoteItems.push(decryptedItem);
+
+                if (decryptedItem.senderDevice !== this.deviceName && !this.items.some((i) => i.id === decryptedItem.id)) {
+                  hasNewIncoming = true;
+                  incomingSender = decryptedItem.senderDevice;
+                  incomingType = decryptedItem.type;
+                }
+              } catch {
+                // Ignore packets with mismatching room keys
+              }
+            } else if (data.item) {
+              const plainItem: SharedItem = data.item;
+              remoteItems.push(plainItem);
+
+              if (plainItem.senderDevice !== this.deviceName && !this.items.some((i) => i.id === plainItem.id)) {
+                hasNewIncoming = true;
+                incomingSender = plainItem.senderDevice;
+                incomingType = plainItem.type;
+              }
+            }
+          }
+
+          if (snapshot.docs.length > 0 || this.items.length > 0) {
+            // Keep local offline queued items if any
+            const localQueued = this.items.filter((i) => i.isQueued);
+            const combinedMap = new Map<string, SharedItem>();
+
+            localQueued.forEach((item) => combinedMap.set(item.id, item));
+            remoteItems.forEach((item) => combinedMap.set(item.id, item));
+
+            this.items = Array.from(combinedMap.values()).sort((a, b) => b.timestamp - a.timestamp);
+            this.pruneExpiredItems();
+            this.saveStorage();
+            this.notify();
+
+            if (hasNewIncoming) {
+              this.triggerIncomingNotification(incomingSender, incomingType);
+            }
+          }
+        },
+        (error) => {
+          console.warn('[QuickPair] Firestore items listener notice:', error.message);
+        }
+      );
+      this.firestoreUnsubs.push(unsubItems);
+
+      // 2. Listen to peer presence at /sessions/{sessionId}/peers/
+      const peersRef = collection(db, 'sessions', sessionId, 'peers');
+      const unsubPeers = onSnapshot(
+        peersRef,
+        (snapshot) => {
+          const now = Date.now();
+          snapshot.docs.forEach((docSnap) => {
+            const peer = docSnap.data() as PeerInfo;
+            if (peer && peer.id && peer.id !== this.deviceId) {
+              if (now - (peer.lastSeen || 0) < 15000) {
+                this.peers.set(peer.id, {
+                  ...peer,
+                  networkType: 'remote',
+                });
+              } else {
+                this.peers.delete(peer.id);
+              }
+            }
+          });
+          this.notify();
+        },
+        (error) => {
+          console.warn('[QuickPair] Firestore peers listener notice:', error.message);
+        }
+      );
+      this.firestoreUnsubs.push(unsubPeers);
+
+      // 3. Listen to typing indicators at /sessions/{sessionId}/typing/
+      const typingRef = collection(db, 'sessions', sessionId, 'typing');
+      const unsubTyping = onSnapshot(
+        typingRef,
+        (snapshot) => {
+          const now = Date.now();
+          snapshot.docs.forEach((docSnap) => {
+            if (docSnap.id !== this.deviceId) {
+              const data = docSnap.data();
+              if (data && now - (data.timestamp || 0) < 5000) {
+                this.typingListeners.forEach((cb) => cb(data.senderDevice, data.isTyping, data.textPreview));
+              }
+            }
+          });
+        },
+        (error) => {
+          console.warn('[QuickPair] Firestore typing listener notice:', error.message);
+        }
+      );
+      this.firestoreUnsubs.push(unsubTyping);
+    } catch (err) {
+      console.warn('[QuickPair] Firestore initialization notice:', err);
+    }
+  }
+
   private initBroadcast() {
     if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
 
@@ -257,7 +408,7 @@ class PeerSyncEngine {
                 const decryptedStr = await decryptRoomPacket(msg.encryptedPacket, this.roomCode);
                 const decryptedItem: SharedItem = JSON.parse(decryptedStr);
 
-                if (!this.items.some(i => i.id === decryptedItem.id)) {
+                if (!this.items.some((i) => i.id === decryptedItem.id)) {
                   this.items = [decryptedItem, ...this.items];
                   this.pruneExpiredItems();
                   this.saveStorage();
@@ -274,7 +425,7 @@ class PeerSyncEngine {
             break;
 
           case 'ADD_ITEM':
-            if (msg.item && !this.items.some(i => i.id === msg.item.id)) {
+            if (msg.item && !this.items.some((i) => i.id === msg.item.id)) {
               this.items = [msg.item, ...this.items];
               this.pruneExpiredItems();
               this.saveStorage();
@@ -287,13 +438,13 @@ class PeerSyncEngine {
             break;
 
           case 'DELETE_ITEM':
-            this.items = this.items.filter(i => i.id !== msg.id);
+            this.items = this.items.filter((i) => i.id !== msg.id);
             this.saveStorage();
             this.notify();
             break;
 
           case 'BURN_ITEM':
-            this.items = this.items.map(i => i.id === msg.id ? { ...i, isBurned: true, content: '[Destroyed]' } : i);
+            this.items = this.items.map((i) => (i.id === msg.id ? { ...i, isBurned: true, content: '[Destroyed]' } : i));
             this.saveStorage();
             this.notify();
             break;
@@ -305,7 +456,7 @@ class PeerSyncEngine {
             break;
 
           case 'TYPING_INDICATOR':
-            this.typingListeners.forEach(cb => cb(msg.senderDevice, msg.isTyping, msg.textPreview));
+            this.typingListeners.forEach((cb) => cb(msg.senderDevice, msg.isTyping, msg.textPreview));
             break;
         }
       };
@@ -318,7 +469,6 @@ class PeerSyncEngine {
         this.sendHeartbeat();
         this.cleanupDeadPeers();
       }, 3000);
-
     } catch {
       // BroadcastChannel unavailable
     }
@@ -348,7 +498,8 @@ class PeerSyncEngine {
     this.peers.clear();
     this.initStorage();
     this.initBroadcast();
-    
+    this.initFirestore();
+
     if (typeof window !== 'undefined' && window.history) {
       const url = new URL(window.location.href);
       url.searchParams.set('room', this.roomCode);
@@ -377,23 +528,42 @@ class PeerSyncEngine {
   }
 
   private sendHeartbeat() {
-    if (!this.channel) return;
-    this.channel.postMessage({
-      type: 'HEARTBEAT',
-      peer: {
-        id: this.deviceId,
-        name: this.deviceName,
-        type: this.deviceType,
-        networkType: 'remote',
-      }
-    });
+    // BroadcastChannel local heartbeat
+    if (this.channel) {
+      this.channel.postMessage({
+        type: 'HEARTBEAT',
+        peer: {
+          id: this.deviceId,
+          name: this.deviceName,
+          type: this.deviceType,
+          networkType: 'remote',
+        },
+      });
+    }
+
+    // Firestore peer presence at /sessions/{sessionId}/peers/{deviceId}
+    if (typeof window !== 'undefined' && isFirebaseConfigured && this.isOnline) {
+      const sessionId = this.roomCode;
+      const peerDocRef = doc(db, 'sessions', sessionId, 'peers', this.deviceId);
+      setDoc(
+        peerDocRef,
+        {
+          id: this.deviceId,
+          name: this.deviceName,
+          type: this.deviceType,
+          lastSeen: Date.now(),
+          networkType: 'remote',
+        },
+        { merge: true }
+      ).catch(() => {});
+    }
   }
 
   private cleanupDeadPeers() {
     const now = Date.now();
     let changed = false;
     for (const [id, peer] of this.peers.entries()) {
-      if (now - peer.lastSeen > 8000) {
+      if (now - peer.lastSeen > 12000) {
         this.peers.delete(id);
         changed = true;
       }
@@ -405,11 +575,11 @@ class PeerSyncEngine {
 
   private notify() {
     const peerList = Array.from(this.peers.values());
-    this.listeners.forEach(listener => listener([...this.items], peerList, this.roomCode));
+    this.listeners.forEach((listener) => listener([...this.items], peerList, this.roomCode));
   }
 
   private notifyNetwork() {
-    this.networkListeners.forEach(listener => listener(this.isOnline, this.offlineQueue.length));
+    this.networkListeners.forEach((listener) => listener(this.isOnline, this.offlineQueue.length));
   }
 
   // Public methods
@@ -437,13 +607,25 @@ class PeerSyncEngine {
   }
 
   public sendTyping(isTyping: boolean, textPreview?: string) {
-    if (!this.channel) return;
-    this.channel.postMessage({
-      type: 'TYPING_INDICATOR',
-      senderDevice: this.deviceName,
-      isTyping,
-      textPreview,
-    });
+    if (this.channel) {
+      this.channel.postMessage({
+        type: 'TYPING_INDICATOR',
+        senderDevice: this.deviceName,
+        isTyping,
+        textPreview,
+      });
+    }
+
+    if (typeof window !== 'undefined' && isFirebaseConfigured && this.isOnline) {
+      const sessionId = this.roomCode;
+      const typingDocRef = doc(db, 'sessions', sessionId, 'typing', this.deviceId);
+      setDoc(typingDocRef, {
+        senderDevice: this.deviceName,
+        isTyping,
+        textPreview: textPreview || '',
+        timestamp: Date.now(),
+      }).catch(() => {});
+    }
   }
 
   public async addItem(item: QueuedItem, forceOnlineSend: boolean = false): Promise<SharedItem> {
@@ -483,10 +665,10 @@ class PeerSyncEngine {
     };
 
     // Remove any temporary queued entry if this is a flush
-    this.items = [newItem, ...this.items.filter(i => !i.isQueued || i.content !== item.content)];
+    this.items = [newItem, ...this.items.filter((i) => !i.isQueued || i.content !== item.content)];
     this.saveStorage();
 
-    // Broadcast with End-to-End Encryption (AES-GCM 256-bit)
+    // Broadcast with End-to-End Encryption (AES-GCM 256-bit) via BroadcastChannel
     if (this.channel) {
       try {
         const encryptedPacket = await encryptRoomPacket(JSON.stringify(newItem), this.roomCode);
@@ -502,12 +684,36 @@ class PeerSyncEngine {
       }
     }
 
+    // Write to Cloud Firestore under /sessions/{sessionId}/items/{itemId}
+    if (typeof window !== 'undefined' && isFirebaseConfigured && this.isOnline) {
+      const sessionId = this.roomCode;
+      const itemDocRef = doc(db, 'sessions', sessionId, 'items', newItem.id);
+      try {
+        const encryptedPacket = await encryptRoomPacket(JSON.stringify(newItem), this.roomCode);
+        setDoc(itemDocRef, {
+          id: newItem.id,
+          encryptedPacket,
+          timestamp: newItem.timestamp,
+          expiresAt: newItem.expiresAt,
+          senderDevice: newItem.senderDevice,
+        }).catch((err) => console.warn('[QuickPair] Firestore item write notice:', err));
+      } catch {
+        setDoc(itemDocRef, {
+          id: newItem.id,
+          item: newItem,
+          timestamp: newItem.timestamp,
+          expiresAt: newItem.expiresAt,
+          senderDevice: newItem.senderDevice,
+        }).catch((err) => console.warn('[QuickPair] Firestore item write notice:', err));
+      }
+    }
+
     this.notify();
     return newItem;
   }
 
   public deleteItem(id: string) {
-    this.items = this.items.filter(i => i.id !== id);
+    this.items = this.items.filter((i) => i.id !== id);
     this.saveStorage();
 
     if (this.channel) {
@@ -517,11 +723,18 @@ class PeerSyncEngine {
       });
     }
 
+    // Firestore delete under /sessions/{sessionId}/items/{itemId}
+    if (typeof window !== 'undefined' && isFirebaseConfigured && this.isOnline) {
+      const sessionId = this.roomCode;
+      const itemDocRef = doc(db, 'sessions', sessionId, 'items', id);
+      deleteDoc(itemDocRef).catch(() => {});
+    }
+
     this.notify();
   }
 
   public burnItem(id: string) {
-    this.items = this.items.map(i => i.id === id ? { ...i, isBurned: true, content: '[Destroyed]' } : i);
+    this.items = this.items.map((i) => (i.id === id ? { ...i, isBurned: true, content: '[Destroyed]' } : i));
     this.saveStorage();
 
     if (this.channel) {
@@ -529,6 +742,13 @@ class PeerSyncEngine {
         type: 'BURN_ITEM',
         id,
       });
+    }
+
+    // Firestore burn/purge under /sessions/{sessionId}/items/{itemId}
+    if (typeof window !== 'undefined' && isFirebaseConfigured && this.isOnline) {
+      const sessionId = this.roomCode;
+      const itemDocRef = doc(db, 'sessions', sessionId, 'items', id);
+      deleteDoc(itemDocRef).catch(() => {});
     }
 
     this.notify();
@@ -544,6 +764,19 @@ class PeerSyncEngine {
       this.channel.postMessage({
         type: 'CLEAR_ALL',
       });
+    }
+
+    // Firestore purge all items under /sessions/{sessionId}/items/
+    if (typeof window !== 'undefined' && isFirebaseConfigured && this.isOnline) {
+      const sessionId = this.roomCode;
+      const itemsRef = collection(db, 'sessions', sessionId, 'items');
+      getDocs(itemsRef)
+        .then((snapshot) => {
+          const batch = writeBatch(db);
+          snapshot.docs.forEach((d) => batch.delete(d.ref));
+          batch.commit().catch(() => {});
+        })
+        .catch(() => {});
     }
 
     this.notify();
