@@ -7,6 +7,7 @@ import {
   ExternalLink,
   FileText,
   Image as ImageIcon,
+  Lock,
 } from 'lucide-react';
 import { sounds } from '../services/audio';
 import { peerSync, SharedItem } from '../services/peerSync';
@@ -66,13 +67,13 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
   };
 
   return (
-    <section className="w-full max-w-[760px] mx-auto px-4 pt-4 sm:pt-6 pb-6">
-      {/* Header: Clean Recent count & Clear button */}
-      <div className="flex items-center justify-between pb-2 mb-2 border-b border-border text-xs text-text-secondary">
+    <section className="w-full max-w-[760px] mx-auto px-4 pt-5 pb-6">
+      {/* Header: Clean title & Clear all */}
+      <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/80 text-xs">
         <div className="flex items-center gap-2">
-          <span className="text-text-primary font-semibold text-sm">Recent</span>
+          <span className="text-text-primary font-bold text-[14px]">Shared Items</span>
           {items.length > 0 && (
-            <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-subtle text-text-muted border border-border font-mono">
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-subtle text-text-muted border border-border font-semibold">
               {items.length}
             </span>
           )}
@@ -83,7 +84,7 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
               sounds.playClick();
               peerSync.clearAll();
             }}
-            className="hover:text-red-500 text-xs transition-colors py-1 px-1 cursor-pointer font-medium"
+            className="hover:text-red-500 text-text-muted text-xs transition-colors py-1 px-1 cursor-pointer font-medium"
           >
             Clear all
           </button>
@@ -92,15 +93,18 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
 
       {/* Empty State */}
       {items.length === 0 ? (
-        <div className="py-10 sm:py-14 text-center space-y-1">
-          <p className="text-sm font-medium text-text-primary">Nothing here yet.</p>
-          <p className="text-xs text-text-muted">
-            Paste text or drop a file above to send instantly.
+        <div className="py-12 sm:py-16 text-center space-y-1.5 select-none">
+          <div className="w-12 h-12 rounded-2xl bg-subtle border border-border mx-auto flex items-center justify-center text-text-muted mb-2 shadow-xs">
+            <FileText className="w-5 h-5 opacity-60" />
+          </div>
+          <p className="text-sm font-semibold text-text-primary">No items shared yet</p>
+          <p className="text-xs text-text-muted max-w-xs mx-auto">
+            Open QuickPair on another phone or laptop to start beaming instantly.
           </p>
         </div>
       ) : (
-        /* Clean List of Messages & Files */
-        <div className="divide-y divide-border/70">
+        /* Clean List of Sent & Received Items */
+        <div className="divide-y divide-border/60">
           {items.map((item, index) => {
             const isImage = isImageFile(item);
             const fileName = item.fileData?.name || item.content;
@@ -109,28 +113,28 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
             return (
               <div
                 key={item.id}
-                className={`py-3 sm:py-3.5 flex items-start justify-between gap-3 group transition-all duration-200 ${
+                className={`py-3 sm:py-3.5 flex items-start justify-between gap-3 group transition-all duration-150 ${
                   index === 0 ? 'animate-item-enter' : ''
                 }`}
               >
-                {/* Left: Pure Content (File or Message) + subtle device/time footer */}
+                {/* Left: Pure Content (File, Link, Text) */}
                 <div className="flex-1 min-w-0 space-y-1">
-                  {/* FILE ITEM */}
+                  {/* 1. FILE ITEM */}
                   {item.type === 'file' ? (
                     <div className="flex items-center gap-3">
                       {isImage && item.fileData?.dataUrl ? (
                         <img
                           src={item.fileData.dataUrl}
                           alt={fileName}
-                          className="w-11 h-11 object-cover rounded-lg border border-border flex-shrink-0 bg-subtle"
+                          className="w-12 h-12 object-cover rounded-xl border border-border flex-shrink-0 bg-subtle shadow-xs"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-lg bg-subtle border border-border flex items-center justify-center flex-shrink-0 text-text-secondary">
+                        <div className="w-11 h-11 rounded-xl bg-subtle border border-border flex items-center justify-center flex-shrink-0 text-text-secondary shadow-xs">
                           {isImage ? <ImageIcon className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-[14px] sm:text-[15px] font-medium text-text-primary truncate" title={fileName}>
+                        <p className="text-[14px] sm:text-[15px] font-semibold text-text-primary truncate" title={fileName}>
                           {fileName}
                         </p>
                         {fileSize ? (
@@ -139,78 +143,87 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
                       </div>
                     </div>
                   ) : item.type === 'link' ? (
-                    /* LINK ITEM */
+                    /* 2. LINK ITEM */
                     <a
                       href={item.content}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[14px] sm:text-[15px] text-accent hover:underline font-normal break-all inline-flex items-center gap-1.5"
+                      className="text-[14px] sm:text-[15px] text-[#FF5B37] hover:underline font-medium break-all inline-flex items-center gap-1.5"
                     >
                       <span className="break-all">{item.content}</span>
                       <ExternalLink className="w-3.5 h-3.5 flex-shrink-0 opacity-70" />
                     </a>
                   ) : item.type === 'code' ? (
-                    /* CODE ITEM */
-                    <pre className="p-3 rounded-lg bg-subtle border border-border text-xs font-mono text-text-primary overflow-x-auto select-all max-h-36 leading-relaxed">
-                      <code>{item.content}</code>
+                    /* 3. CODE SNIPPET */
+                    <pre className="text-xs font-mono bg-subtle p-3 rounded-xl border border-border overflow-x-auto whitespace-pre-wrap leading-relaxed text-text-primary">
+                      {item.content}
                     </pre>
+                  ) : item.type === 'secret' ? (
+                    /* 4. SECRET ENCRYPTED NOTE */
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs font-semibold text-purple-600 dark:text-purple-400">
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>{item.content}</span>
+                    </div>
                   ) : (
-                    /* TEXT MESSAGE ITEM */
-                    <p className="text-[14px] sm:text-[15px] text-text-primary font-normal whitespace-pre-wrap break-words leading-relaxed">
+                    /* 5. TEXT / PLAIN MESSAGE */
+                    <p className="text-[14px] sm:text-[15px] text-text-primary font-normal whitespace-pre-wrap leading-relaxed select-text">
                       {item.content}
                     </p>
                   )}
 
-                  {/* Clean, subtle metadata: "Windows PC · 12:15 PM" */}
-                  <div className="flex items-center gap-1.5 text-[11px] text-text-muted pt-0.5">
-                    <span>{item.senderDevice}</span>
-                    <span>·</span>
-                    <span>
-                      {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                  {/* Subtle Timestamp & Sender Device */}
+                  <div className="flex items-center gap-2 text-[11px] text-text-muted select-none pt-0.5">
+                    <span>{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    {item.senderDevice && (
+                      <>
+                        <span>·</span>
+                        <span>{item.senderDevice}</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                {/* Right: Clean Actions (Download / Copy + Delete) */}
-                <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5">
-                  {item.type === 'file' ? (
+                {/* Right: Quick Action Buttons (Copy / Download / Delete) */}
+                <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
+                  {/* Download Button (for files) */}
+                  {item.type === 'file' && (
                     <button
                       onClick={() => handleDownload(item)}
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-subtle hover:bg-hover active:bg-hover border border-border text-text-primary text-xs font-medium transition-colors cursor-pointer"
+                      className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-subtle active:scale-95 transition-all cursor-pointer"
                       title="Download file"
+                      aria-label="Download"
                     >
-                      <Download className="w-3.5 h-3.5 text-text-secondary" />
-                      <span>Download</span>
+                      <Download className="w-4 h-4" />
                     </button>
-                  ) : (
+                  )}
+
+                  {/* Copy Button (for text, links, code) */}
+                  {item.type !== 'file' && (
                     <button
                       onClick={() => handleCopy(item)}
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-subtle hover:bg-hover active:bg-hover border border-border text-text-primary text-xs font-medium transition-colors cursor-pointer"
-                      title="Copy text"
+                      className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-subtle active:scale-95 transition-all cursor-pointer"
+                      title="Copy to clipboard"
+                      aria-label="Copy"
                     >
                       {copiedId === item.id ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-accent" />
-                          <span className="text-accent font-medium">Copied</span>
-                        </>
+                        <Check className="w-4 h-4 text-emerald-500" />
                       ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5 text-text-secondary" />
-                          <span>Copy</span>
-                        </>
+                        <Copy className="w-4 h-4" />
                       )}
                     </button>
                   )}
 
+                  {/* Delete Button */}
                   <button
                     onClick={() => handleDelete(item.id)}
-                    className="p-1.5 rounded-lg text-text-muted hover:text-red-500 hover:bg-subtle transition-colors cursor-pointer"
+                    className="p-2 rounded-xl text-text-muted hover:text-red-500 hover:bg-red-500/10 active:scale-95 transition-all cursor-pointer opacity-70 hover:opacity-100"
                     title="Delete item"
                     aria-label="Delete"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
+
               </div>
             );
           })}
