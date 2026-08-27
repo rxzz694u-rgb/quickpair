@@ -33,9 +33,10 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
     sounds.playSuccess();
     const downloadUrl = item.fileData?.dataUrl || item.fileData?.previewUrl;
     const fileName = item.fileData?.name || item.content || 'quickpair-file';
+    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-    // 1. iOS Safari / Mobile Native Share (Saves directly to Photos / Files / AirDrop)
-    if (typeof navigator !== 'undefined' && navigator.share && downloadUrl) {
+    // 1. Mobile Only (iOS / Android): Native Share Sheet to Save to Photos / Files
+    if (isMobile && typeof navigator !== 'undefined' && navigator.share && downloadUrl) {
       try {
         const response = await fetch(downloadUrl);
         const blob = await response.blob();
@@ -54,9 +55,16 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
       }
     }
 
-    // 2. Direct browser download for Desktop / Android
+    // 2. PC / Desktop: Direct 1-Click Instant File Download
     if (downloadUrl) {
-      if (downloadUrl.startsWith('http')) {
+      if (downloadUrl.startsWith('data:')) {
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
         try {
           const res = await fetch(downloadUrl);
           const blob = await res.blob();
@@ -71,13 +79,6 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
         } catch {
           window.open(downloadUrl, '_blank');
         }
-      } else {
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
       }
     } else {
       const blob = new Blob([item.content], { type: 'text/plain' });
@@ -89,6 +90,27 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 3000);
+    }
+  };
+
+  const handleImageClick = (imgSrc: string, fileName: string, item: SharedItem) => {
+    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    sounds.playPop();
+
+    if (isMobile) {
+      // Mobile: Open Lightbox modal with Save to Photos
+      setActivePreviewImage({ url: imgSrc, name: fileName, item });
+    } else {
+      // PC: Open image in new browser tab for clean full-resolution viewing
+      const fullUrl = item.fileData?.dataUrl || imgSrc;
+      if (fullUrl) {
+        const win = window.open();
+        if (win) {
+          win.document.write(
+            `<!DOCTYPE html><html><head><title>${fileName}</title><style>body{margin:0;background:#0A0A0C;display:flex;align-items:center;justify-content:center;height:100vh;}img{max-width:96vw;max-height:96vh;object-fit:contain;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.8);}</style></head><body><img src="${fullUrl}" alt="${fileName}"/></body></html>`
+          );
+        }
+      }
     }
   };
 
@@ -174,11 +196,9 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
                     <div className="flex items-center gap-3">
                       {isImage && imgSrc ? (
                         <div
-                          onClick={() => {
-                            sounds.playPop();
-                            setActivePreviewImage({ url: imgSrc, name: fileName, item });
-                          }}
+                          onClick={() => handleImageClick(imgSrc, fileName, item)}
                           className="relative w-12 h-12 rounded-xl overflow-hidden border border-border flex-shrink-0 bg-subtle shadow-xs cursor-pointer group/img active:scale-95 transition-transform"
+                          title="Click to view image"
                         >
                           <img
                             src={imgSrc}
@@ -196,8 +216,7 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
                         <p
                           onClick={() => {
                             if (isImage && imgSrc) {
-                              sounds.playPop();
-                              setActivePreviewImage({ url: imgSrc, name: fileName, item });
+                              handleImageClick(imgSrc, fileName, item);
                             }
                           }}
                           className={`text-[14px] sm:text-[15px] font-semibold text-text-primary truncate ${isImage && imgSrc ? 'cursor-pointer hover:underline' : ''}`}
@@ -253,12 +272,12 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
 
                 {/* Right: Quick Action Buttons (Copy / Download / Delete) */}
                 <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
-                  {/* Download Button (for files) */}
+                  {/* Download Button (Direct download on PC, Share sheet on iPhone) */}
                   {item.type === 'file' && (
                     <button
                       onClick={() => handleDownload(item)}
                       className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-subtle active:scale-95 transition-all cursor-pointer"
-                      title="Download or Save to Photos"
+                      title="Download file"
                       aria-label="Download"
                     >
                       <Download className="w-4 h-4" />
@@ -298,7 +317,7 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
         </div>
       )}
 
-      {/* FULLSCREEN IMAGE LIGHTBOX MODAL (Optimized for iPhone / iOS Photos Save) */}
+      {/* FULLSCREEN IMAGE LIGHTBOX MODAL (Mobile only for iPhone / Android) */}
       {activePreviewImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade">
           <div
