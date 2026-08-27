@@ -103,12 +103,8 @@ class PeerSyncEngine {
 
       if (urlRoom && urlRoom.trim()) {
         this.roomCode = urlRoom.trim().toUpperCase();
-        try {
-          localStorage.setItem('quickpair_active_room', this.roomCode);
-        } catch {}
       } else {
-        const savedRoom = localStorage.getItem('quickpair_active_room');
-        this.roomCode = savedRoom && savedRoom.trim() ? savedRoom.trim().toUpperCase() : 'MAIN';
+        this.roomCode = 'MAIN';
       }
 
       const ua = navigator.userAgent;

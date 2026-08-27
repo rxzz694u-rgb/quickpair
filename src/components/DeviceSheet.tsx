@@ -110,17 +110,32 @@ export const DeviceSheet: React.FC<DeviceSheetProps> = ({
         </div>
 
         {/* Action Button: Connect / Switch Room */}
-        <button
-          onClick={() => {
-            sounds.playClick();
-            onClose();
-            onOpenQR();
-          }}
-          className="w-full py-3 rounded-2xl bg-[#0A0A0C] dark:bg-white text-white dark:text-[#0A0A0C] text-xs font-semibold flex items-center justify-center gap-2 shadow-md hover:opacity-90 active:scale-98 transition-all cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Connect device / Scan QR</span>
-        </button>
+        <div className="space-y-2 pt-1">
+          <button
+            onClick={() => {
+              sounds.playClick();
+              onClose();
+              onOpenQR();
+            }}
+            className="w-full py-3 rounded-2xl bg-[#0A0A0C] dark:bg-white text-white dark:text-[#0A0A0C] text-xs font-semibold flex items-center justify-center gap-2 shadow-md hover:opacity-90 active:scale-98 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Connect device / Scan QR</span>
+          </button>
+
+          {roomCode !== 'MAIN' && (
+            <button
+              onClick={() => {
+                sounds.playClick();
+                peerSync.setRoom('MAIN');
+                onClose();
+              }}
+              className="w-full py-2.5 rounded-2xl bg-subtle hover:bg-hover text-text-secondary hover:text-text-primary text-xs font-medium border border-border transition-colors cursor-pointer"
+            >
+              Reset to default shared room (#MAIN)
+            </button>
+          )}
+        </div>
 
       </div>
     </div>
