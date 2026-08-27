@@ -1,21 +1,9 @@
-// QuickPair PWA Service Worker
-const CACHE_NAME = 'quickpair-v2.0';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/favicon.svg',
-  '/manifest.json',
-  '/og-preview.svg',
-  '/robots.txt',
-  '/sitemap.xml'
-];
+// QuickPair PWA Service Worker (Network-First for instant updates)
+const CACHE_NAME = 'quickpair-v3.0-' + Date.now();
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    }).then(() => self.skipWaiting())
-  );
+  // Force active service worker to update immediately
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -33,45 +21,31 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
-
-  // Ignore cross-origin non-http requests
   if (!url.protocol.startsWith('http')) return;
 
+  // Network-First for HTML navigation and JS/CSS bundles to ensure immediate live updates
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch in background to update cache
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse.clone());
-            });
-          }
-        }).catch(() => {});
-        return cachedResponse;
-      }
-
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
         return networkResponse;
-      }).catch(() => {
-        // Fallback for HTML navigation when completely offline
-        if (event.request.headers.get('accept')?.includes('text/html')) {
-          return caches.match('/');
-        }
-      });
-    })
+      })
+      .catch(() => {
+        // Fallback to cache only if network fails (offline)
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          if (event.request.headers.get('accept')?.includes('text/html')) {
+            return caches.match('/');
+          }
+        });
+      })
   );
 });

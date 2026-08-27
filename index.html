@@ -87,11 +87,13 @@
   <body class="bg-background text-text-primary antialiased min-h-screen overscroll-none">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- PWA Service Worker Registration -->
+    <!-- PWA Service Worker Registration with Instant Auto-Update -->
     <script>
       if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js').catch(function() {});
+          navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            reg.update().catch(function() {});
+          }).catch(function() {});
         });
       }
     </script>
