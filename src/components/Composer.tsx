@@ -497,7 +497,7 @@ export const Composer: React.FC<ComposerProps> = ({ onOpenDevices, peerCount }) 
         </button>
 
         <span className="text-[11px] text-text-muted hidden sm:inline">
-          Sub-5ms Wi-Fi Mesh · E2E Encrypted
+          Instant Real-Time Sync · E2E Encrypted
         </span>
       </div>
     </section>

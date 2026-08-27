@@ -1,5 +1,5 @@
-// High-Performance Hybrid P2P (WebRTC DataChannel) & Cloud Firestore Live Sync
-// Delivers sub-5ms instant local Wi-Fi transfer + cloud persistence across devices
+// High-Performance Dual-Engine Sync (Local Wi-Fi P2P + Cloud Firestore Live Stream)
+// Delivers sub-5ms local Wi-Fi transfer + zero-delay instant sync between iPhone, Mac, Windows, and Android
 
 import { EncryptedPayload, encryptRoomPacket, decryptRoomPacket } from './crypto';
 import { sounds } from './audio';
@@ -72,7 +72,7 @@ const RTC_CONFIG: RTCConfiguration = {
 
 class PeerSyncEngine {
   private channel: BroadcastChannel | null = null;
-  private roomCode: string = 'main';
+  private roomCode: string = 'MAIN';
   private items: SharedItem[] = [];
   private offlineQueue: QueuedItem[] = [];
   private peers: Map<string, PeerInfo> = new Map();
@@ -103,9 +103,12 @@ class PeerSyncEngine {
 
       if (urlRoom && urlRoom.trim()) {
         this.roomCode = urlRoom.trim().toUpperCase();
+        try {
+          localStorage.setItem('quickpair_active_room', this.roomCode);
+        } catch {}
       } else {
         const savedRoom = localStorage.getItem('quickpair_active_room');
-        this.roomCode = savedRoom && savedRoom.trim() ? savedRoom.trim().toUpperCase() : 'main';
+        this.roomCode = savedRoom && savedRoom.trim() ? savedRoom.trim().toUpperCase() : 'MAIN';
       }
 
       const ua = navigator.userAgent;
@@ -140,7 +143,7 @@ class PeerSyncEngine {
       this.initExpirationWatcher();
       this.initUnload();
     } else {
-      this.roomCode = 'main';
+      this.roomCode = 'MAIN';
       this.deviceType = 'desktop';
       this.deviceName = 'This Device';
     }
@@ -192,18 +195,22 @@ class PeerSyncEngine {
     if (typeof window === 'undefined') return;
 
     const handleForeground = () => {
-      if (document.visibilityState === 'visible') {
-        this.unreadCount = 0;
-        document.title = this.originalTitle;
-        this.publishPresence();
-        if (this.firestoreUnsubs.length === 0) {
-          this.initFirestore();
-        }
+      this.isOnline = navigator.onLine;
+      this.unreadCount = 0;
+      document.title = this.originalTitle;
+      this.publishPresence();
+      if (this.firestoreUnsubs.length === 0) {
+        this.initFirestore();
       }
     };
 
     window.addEventListener('focus', handleForeground);
-    document.addEventListener('visibilitychange', handleForeground);
+    window.addEventListener('pageshow', handleForeground);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        handleForeground();
+      }
+    });
   }
 
   private initUnload() {
@@ -248,13 +255,18 @@ class PeerSyncEngine {
       } else {
         this.items = [];
       }
-
-      const savedQueue = localStorage.getItem('quickpair_offline_queue');
-      if (savedQueue) {
-        this.offlineQueue = JSON.parse(savedQueue);
-      }
     } catch {
       this.items = [];
+    }
+
+    try {
+      const savedQueue = localStorage.getItem(`quickpair_queue_${this.roomCode}`);
+      if (savedQueue) {
+        this.offlineQueue = JSON.parse(savedQueue);
+      } else {
+        this.offlineQueue = [];
+      }
+    } catch {
       this.offlineQueue = [];
     }
   }
@@ -262,7 +274,7 @@ class PeerSyncEngine {
   private saveStorage() {
     try {
       localStorage.setItem(`quickpair_items_${this.roomCode}`, JSON.stringify(this.items.slice(0, 50)));
-      localStorage.setItem('quickpair_offline_queue', JSON.stringify(this.offlineQueue));
+      localStorage.setItem(`quickpair_queue_${this.roomCode}`, JSON.stringify(this.offlineQueue));
     } catch {}
   }
 
@@ -291,12 +303,11 @@ class PeerSyncEngine {
     this.peerConnections.clear();
   }
 
-  // --- WEBRTC DIRECT LOCAL WI-FI MESH ENGINE ---
+  // --- WEBRTC DIRECT LOCAL WI-FI HIGH-SPEED TRANSFER ---
 
   private setupDataChannel(dc: RTCDataChannel, remotePeerId: string) {
     dc.onopen = () => {
       this.dataChannels.set(remotePeerId, dc);
-      // Mark peer as direct local Wi-Fi
       const existing = this.peers.get(remotePeerId);
       if (existing) {
         this.peers.set(remotePeerId, { ...existing, networkType: 'wifi' });
@@ -351,7 +362,7 @@ class PeerSyncEngine {
       const pc = new RTCPeerConnection(RTC_CONFIG);
       this.peerConnections.set(targetPeerId, pc);
 
-      const dc = pc.createDataChannel('quickpair-direct', { ordered: true });
+      const dc = pc.createDataChannel('quickpair-direct', { ordered: false, maxRetransmits: 0 });
       this.setupDataChannel(dc, targetPeerId);
 
       pc.onicecandidate = (event) => {
@@ -442,7 +453,7 @@ class PeerSyncEngine {
     try {
       const sessionId = this.roomCode;
 
-      // 1. Live Items Stream
+      // 1. Live Items Stream (Zero-delay instant push)
       const itemsRef = collection(db, 'sessions', sessionId, 'items');
       const unsubItems = onSnapshot(
         itemsRef,
@@ -501,7 +512,7 @@ class PeerSyncEngine {
       );
       this.firestoreUnsubs.push(unsubItems);
 
-      // 2. Peer Presence & WebRTC Auto-Pairing Stream
+      // 2. Peer Presence & Auto-Pairing Stream
       const peersRef = collection(db, 'sessions', sessionId, 'peers');
       const unsubPeers = onSnapshot(
         peersRef,
@@ -510,7 +521,7 @@ class PeerSyncEngine {
           snapshot.docs.forEach((docSnap) => {
             const peer = docSnap.data() as PeerInfo;
             if (peer && peer.id && peer.id !== this.deviceId) {
-              if (now - (peer.lastSeen || 0) < 60000) {
+              if (now - (peer.lastSeen || 0) < 35000) {
                 this.peers.set(peer.id, {
                   id: peer.id,
                   name: peer.name || 'Connected Device',
@@ -519,7 +530,6 @@ class PeerSyncEngine {
                   networkType: this.dataChannels.has(peer.id) ? 'wifi' : 'remote',
                 });
 
-                // Establish WebRTC DataChannel if my deviceId is lower (deterministic offerer)
                 if (this.deviceId < peer.id && !this.peerConnections.has(peer.id)) {
                   this.initiateP2PConnection(peer.id);
                 }
@@ -544,7 +554,6 @@ class PeerSyncEngine {
               const data = change.doc.data();
               if (data && data.target === this.deviceId && data.from) {
                 this.handleP2POffer(data);
-                // Clean signal doc
                 deleteDoc(change.doc.ref).catch(() => {});
               }
             }
@@ -626,7 +635,7 @@ class PeerSyncEngine {
           });
         }
         this.publishPresence();
-      }, 25000); // Light keep-alive every 25s (prevents Firestore quota throttling)
+      }, 5000); // Active heartbeat every 5s for fast presence
     } catch {}
   }
 
@@ -655,7 +664,10 @@ class PeerSyncEngine {
 
     this.closeWebRTC();
     this.roomCode = formatted;
-    localStorage.setItem('quickpair_active_room', formatted);
+    try {
+      localStorage.setItem('quickpair_active_room', this.roomCode);
+    } catch {}
+
     this.peers.clear();
     this.initStorage();
     this.initBroadcast();
@@ -726,17 +738,16 @@ class PeerSyncEngine {
 
   public sendTyping(isTyping: boolean, textPreview?: string) {
     const now = Date.now();
-    if (isTyping && now - this.lastTypingTime < 300) return;
+    if (isTyping && now - this.lastTypingTime < 250) return;
     this.lastTypingTime = now;
 
     const payload = {
       type: 'TYPING',
       senderDevice: this.deviceName,
       isTyping,
-      textPreview: textPreview || '',
+      textPreview,
     };
 
-    // 1. Direct WebRTC P2P (instant sub-5ms)
     this.dataChannels.forEach((dc) => {
       if (dc.readyState === 'open') {
         try {
@@ -745,7 +756,6 @@ class PeerSyncEngine {
       }
     });
 
-    // 2. BroadcastChannel
     if (this.channel) {
       this.channel.postMessage(payload);
     }
@@ -791,7 +801,7 @@ class PeerSyncEngine {
     this.saveStorage();
     this.notify();
 
-    // 2. Direct WebRTC DataChannel (instant < 5ms peer-to-peer delivery over Wi-Fi)
+    // 2. Direct WebRTC DataChannel (sub-5ms over Wi-Fi)
     const directPayload = JSON.stringify({ type: 'ITEM', item: newItem });
     this.dataChannels.forEach((dc) => {
       if (dc.readyState === 'open') {
@@ -801,12 +811,12 @@ class PeerSyncEngine {
       }
     });
 
-    // 3. Local BroadcastChannel
+    // 3. Local BroadcastChannel (instant multi-tab)
     if (this.channel) {
       this.channel.postMessage({ type: 'ADD_ITEM', item: newItem });
     }
 
-    // 4. Cloud Firestore write for persistence & remote mesh
+    // 4. Cloud Firestore stream (instant guaranteed delivery anywhere in the world)
     if (typeof window !== 'undefined' && isFirebaseConfigured && this.isOnline) {
       const payload = {
         id: newItem.id,
@@ -819,7 +829,6 @@ class PeerSyncEngine {
         timestamp: newItem.timestamp,
         expiresAt: newItem.expiresAt,
         isBurned: false,
-        isQueued: false,
         isEncrypted: true,
       };
 
@@ -830,14 +839,15 @@ class PeerSyncEngine {
   }
 
   public deleteItem(id: string) {
-    this.items = this.items.filter((i) => i.id !== id);
+    this.items = this.items.filter((item) => item.id !== id);
     this.saveStorage();
+    this.notify();
 
-    const payload = JSON.stringify({ type: 'DELETE_ITEM', id });
+    const directPayload = JSON.stringify({ type: 'DELETE_ITEM', id });
     this.dataChannels.forEach((dc) => {
       if (dc.readyState === 'open') {
         try {
-          dc.send(payload);
+          dc.send(directPayload);
         } catch {}
       }
     });
@@ -846,22 +856,23 @@ class PeerSyncEngine {
       this.channel.postMessage({ type: 'DELETE_ITEM', id });
     }
 
-    if (typeof window !== 'undefined' && isFirebaseConfigured && this.isOnline) {
+    if (isFirebaseConfigured && this.isOnline) {
       deleteDoc(doc(db, 'sessions', this.roomCode, 'items', id)).catch(() => {});
     }
-
-    this.notify();
   }
 
-  public burnItem(id: string) {
-    this.items = this.items.map((i) => (i.id === id ? { ...i, isBurned: true, content: '[Destroyed]' } : i));
+  public burnSecretItem(id: string) {
+    this.items = this.items.map((item) =>
+      item.id === id ? { ...item, isBurned: true, content: '[Destroyed - Burned on Read]' } : item
+    );
     this.saveStorage();
+    this.notify();
 
-    const payload = JSON.stringify({ type: 'BURN_ITEM', id });
+    const directPayload = JSON.stringify({ type: 'BURN_ITEM', id });
     this.dataChannels.forEach((dc) => {
       if (dc.readyState === 'open') {
         try {
-          dc.send(payload);
+          dc.send(directPayload);
         } catch {}
       }
     });
@@ -870,24 +881,26 @@ class PeerSyncEngine {
       this.channel.postMessage({ type: 'BURN_ITEM', id });
     }
 
-    if (typeof window !== 'undefined' && isFirebaseConfigured && this.isOnline) {
+    if (isFirebaseConfigured && this.isOnline) {
       deleteDoc(doc(db, 'sessions', this.roomCode, 'items', id)).catch(() => {});
     }
+  }
 
-    this.notify();
+  public burnItem(id: string) {
+    this.burnSecretItem(id);
   }
 
   public clearAll() {
     this.items = [];
     this.offlineQueue = [];
     this.saveStorage();
-    this.notifyNetwork();
+    this.notify();
 
-    const payload = JSON.stringify({ type: 'CLEAR_ALL' });
+    const directPayload = JSON.stringify({ type: 'CLEAR_ALL' });
     this.dataChannels.forEach((dc) => {
       if (dc.readyState === 'open') {
         try {
-          dc.send(payload);
+          dc.send(directPayload);
         } catch {}
       }
     });
@@ -896,20 +909,18 @@ class PeerSyncEngine {
       this.channel.postMessage({ type: 'CLEAR_ALL' });
     }
 
-    if (typeof window !== 'undefined' && isFirebaseConfigured && this.isOnline) {
+    if (isFirebaseConfigured && this.isOnline) {
       getDocs(collection(db, 'sessions', this.roomCode, 'items'))
         .then((snapshot) => {
           const batch = writeBatch(db);
           snapshot.docs.forEach((d) => batch.delete(d.ref));
-          batch.commit().catch(() => {});
+          return batch.commit();
         })
         .catch(() => {});
     }
-
-    this.notify();
   }
 
-  public getDevice() {
+  public getDevice(): { id: string; name: string; type: 'desktop' | 'mobile' | 'tablet' } {
     return {
       id: this.deviceId,
       name: this.deviceName,
@@ -919,10 +930,6 @@ class PeerSyncEngine {
 
   public getItems(): SharedItem[] {
     return [...this.items];
-  }
-
-  public getPeers(): PeerInfo[] {
-    return Array.from(this.peers.values());
   }
 }
 

@@ -89,7 +89,7 @@ export const DeviceSheet: React.FC<DeviceSheetProps> = ({
                   <div>
                     <p className="font-bold text-text-primary text-[13px]">{peer.name}</p>
                     <p className="text-[11px] text-text-muted">
-                      {peer.networkType === 'wifi' ? 'Direct Local Wi-Fi' : 'Remote Mesh'}
+                      Live sync active
                     </p>
                   </div>
                 </div>

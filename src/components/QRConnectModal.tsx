@@ -125,7 +125,7 @@ export const QRConnectModal: React.FC<QRConnectModalProps> = ({ isOpen, onClose 
         {activeTab === 'qr' ? (
           <div className="space-y-3.5 animate-fade pt-1">
             <p className="text-xs text-text-muted leading-relaxed">
-              Scan with your phone camera to pair instantly on same Wi-Fi or cellular data (4G/5G).
+              Scan with your phone camera to pair instantly across your devices.
             </p>
 
             {/* Real Dynamic QR Code */}
