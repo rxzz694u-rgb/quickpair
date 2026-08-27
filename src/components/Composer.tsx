@@ -221,6 +221,11 @@ export const Composer: React.FC<ComposerProps> = ({ onOpenDevices, peerCount }) 
     setText('');
     setSelectedFile(null);
 
+    const safetyTimer = setTimeout(() => {
+      setSendState('idle');
+      setIsSyncing(false);
+    }, 2500);
+
     try {
       if (fileToProcess) {
         const fileData = await processFileForSync(fileToProcess, peerSync.getRoomCode());
@@ -242,13 +247,15 @@ export const Composer: React.FC<ComposerProps> = ({ onOpenDevices, peerCount }) 
         });
       }
 
+      clearTimeout(safetyTimer);
       setSendState('sent');
       setIsSyncing(false);
 
       setTimeout(() => {
         setSendState('idle');
-      }, 1200);
+      }, 1000);
     } catch {
+      clearTimeout(safetyTimer);
       setSendState('idle');
       setIsSyncing(false);
     }
