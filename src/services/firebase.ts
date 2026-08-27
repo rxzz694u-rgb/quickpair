@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, memoryLocalCache } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyD90hrbD1GhLRlFIKDamTASp9F-eDj_M6M',
@@ -20,7 +20,15 @@ export const isFirebaseConfigured = Boolean(
 // Initialize Firebase app if not already initialized
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Cloud Firestore and export instance
-export const db = getFirestore(app);
+// Initialize Cloud Firestore with memory cache for ultra-low latency & zero disk I/O lag
+export const db = (() => {
+  try {
+    return initializeFirestore(app, {
+      localCache: memoryLocalCache(),
+    });
+  } catch {
+    return getFirestore(app);
+  }
+})();
 
 export { firebaseConfig };
