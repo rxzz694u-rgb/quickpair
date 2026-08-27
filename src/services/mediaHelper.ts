@@ -19,7 +19,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 
 // Fast Canvas thumbnail generator (< 25KB, sub-30ms execution)
 export async function createThumbnail(file: File): Promise<string | undefined> {
-  if (!file.type.startsWith('image/')) return undefined;
+  const isImg = file.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp|heic|avif)$/i.test(file.name);
+  if (!isImg) return undefined;
 
   return new Promise((resolve) => {
     const reader = new FileReader();

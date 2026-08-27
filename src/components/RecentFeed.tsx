@@ -8,6 +8,8 @@ import {
   FileText,
   Image as ImageIcon,
   Lock,
+  X,
+  Share2,
 } from 'lucide-react';
 import { sounds } from '../services/audio';
 import { peerSync, SharedItem } from '../services/peerSync';
@@ -18,6 +20,7 @@ interface RecentFeedProps {
 
 export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activePreviewImage, setActivePreviewImage] = useState<{ url: string; name: string; item: SharedItem } | null>(null);
 
   const handleCopy = (item: SharedItem) => {
     navigator.clipboard.writeText(item.content);
@@ -29,6 +32,29 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
   const handleDownload = async (item: SharedItem) => {
     sounds.playSuccess();
     const downloadUrl = item.fileData?.dataUrl || item.fileData?.previewUrl;
+    const fileName = item.fileData?.name || item.content || 'quickpair-file';
+
+    // 1. iOS Safari / Mobile Native Share (Saves directly to Photos / Files / AirDrop)
+    if (typeof navigator !== 'undefined' && navigator.share && downloadUrl) {
+      try {
+        const response = await fetch(downloadUrl);
+        const blob = await response.blob();
+        const mime = blob.type || item.fileData?.mimeType || 'image/jpeg';
+        const file = new File([blob], fileName, { type: mime });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: fileName,
+          });
+          return;
+        }
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
+      }
+    }
+
+    // 2. Direct browser download for Desktop / Android
     if (downloadUrl) {
       if (downloadUrl.startsWith('http')) {
         try {
@@ -37,18 +63,18 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
           const blobUrl = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = blobUrl;
-          a.download = item.fileData?.name || 'download';
+          a.download = fileName;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
-          URL.revokeObjectURL(blobUrl);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
         } catch {
           window.open(downloadUrl, '_blank');
         }
       } else {
         const a = document.createElement('a');
         a.href = downloadUrl;
-        a.download = item.fileData?.name || 'file';
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -58,11 +84,11 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = item.fileData?.name || 'file.txt';
+      a.download = fileName.endsWith('.txt') ? fileName : `${fileName}.txt`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
     }
   };
 
@@ -81,7 +107,12 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
   const isImageFile = (item: SharedItem) => {
     if (item.type !== 'file') return false;
     const name = (item.fileData?.name || item.content).toLowerCase();
-    return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name) || item.fileData?.mimeType?.startsWith('image/');
+    return (
+      /\.(jpg|jpeg|png|gif|webp|svg|bmp|heic|avif)$/i.test(name) ||
+      Boolean(item.fileData?.mimeType?.startsWith('image/')) ||
+      Boolean(item.fileData?.previewUrl?.startsWith('data:image/')) ||
+      Boolean(item.fileData?.dataUrl?.startsWith('data:image/'))
+    );
   };
 
   return (
@@ -142,22 +173,36 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
                   {item.type === 'file' ? (
                     <div className="flex items-center gap-3">
                       {isImage && imgSrc ? (
-                        <img
-                          src={imgSrc}
-                          alt={fileName}
+                        <div
                           onClick={() => {
-                            const fullUrl = item.fileData?.dataUrl || imgSrc;
-                            if (fullUrl) window.open(fullUrl, '_blank');
+                            sounds.playPop();
+                            setActivePreviewImage({ url: imgSrc, name: fileName, item });
                           }}
-                          className="w-12 h-12 object-cover rounded-xl border border-border flex-shrink-0 bg-subtle shadow-xs cursor-pointer hover:opacity-90 transition-opacity"
-                        />
+                          className="relative w-12 h-12 rounded-xl overflow-hidden border border-border flex-shrink-0 bg-subtle shadow-xs cursor-pointer group/img active:scale-95 transition-transform"
+                        >
+                          <img
+                            src={imgSrc}
+                            alt={fileName}
+                            loading="eager"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       ) : (
                         <div className="w-11 h-11 rounded-xl bg-subtle border border-border flex items-center justify-center flex-shrink-0 text-text-secondary shadow-xs">
                           {isImage ? <ImageIcon className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-[14px] sm:text-[15px] font-semibold text-text-primary truncate" title={fileName}>
+                        <p
+                          onClick={() => {
+                            if (isImage && imgSrc) {
+                              sounds.playPop();
+                              setActivePreviewImage({ url: imgSrc, name: fileName, item });
+                            }
+                          }}
+                          className={`text-[14px] sm:text-[15px] font-semibold text-text-primary truncate ${isImage && imgSrc ? 'cursor-pointer hover:underline' : ''}`}
+                          title={fileName}
+                        >
                           {fileName}
                         </p>
                         {fileSize ? (
@@ -213,7 +258,7 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
                     <button
                       onClick={() => handleDownload(item)}
                       className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-subtle active:scale-95 transition-all cursor-pointer"
-                      title="Download file"
+                      title="Download or Save to Photos"
                       aria-label="Download"
                     >
                       <Download className="w-4 h-4" />
@@ -250,6 +295,64 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* FULLSCREEN IMAGE LIGHTBOX MODAL (Optimized for iPhone / iOS Photos Save) */}
+      {activePreviewImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade">
+          <div
+            className="absolute inset-0"
+            onClick={() => setActivePreviewImage(null)}
+          />
+
+          <div className="relative max-w-lg w-full bg-card rounded-3xl border border-border p-4 shadow-2xl z-10 space-y-3.5 animate-sheet-up">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-border/80">
+              <p className="text-xs font-semibold text-text-primary truncate max-w-[240px]">
+                {activePreviewImage.name}
+              </p>
+              <button
+                onClick={() => setActivePreviewImage(null)}
+                className="p-1.5 rounded-full text-text-muted hover:text-text-primary hover:bg-subtle transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Image Box */}
+            <div className="max-h-[60vh] rounded-2xl overflow-hidden bg-black/40 flex items-center justify-center border border-border/50">
+              <img
+                src={activePreviewImage.url}
+                alt={activePreviewImage.name}
+                className="max-h-[60vh] max-w-full object-contain rounded-xl"
+              />
+            </div>
+
+            {/* Actions: Save to Photos / Share */}
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={() => {
+                  handleDownload(activePreviewImage.item);
+                }}
+                className="flex-1 py-3 rounded-2xl bg-[#0A0A0C] dark:bg-white text-white dark:text-[#0A0A0C] text-xs font-semibold flex items-center justify-center gap-2 shadow-md hover:opacity-90 active:scale-98 transition-all cursor-pointer"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Save Image / Share</span>
+              </button>
+
+              <button
+                onClick={() => setActivePreviewImage(null)}
+                className="px-4 py-3 rounded-2xl bg-subtle hover:bg-hover text-text-primary text-xs font-medium border border-border transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
+            <p className="text-[10px] text-text-muted text-center">
+              On iPhone: Tap &quot;Save Image / Share&quot; or press and hold the image to save to Photos.
+            </p>
+          </div>
         </div>
       )}
     </section>
