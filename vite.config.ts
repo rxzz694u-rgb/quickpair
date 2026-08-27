@@ -15,6 +15,9 @@ export default defineConfig({
     host: true,
   },
   build: {
+    target: 'esnext',
+    minify: 'esbuild',
+    cssMinify: true,
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
@@ -24,6 +27,14 @@ export default defineConfig({
         howItWorks: path.resolve(__dirname, 'how-it-works/index.html'),
         contact: path.resolve(__dirname, 'contact/index.html'),
       },
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-firebase': ['firebase/app', 'firebase/firestore', 'firebase/storage'],
+          'vendor-icons': ['lucide-react'],
+        },
+      },
     },
+    chunkSizeWarningLimit: 1200,
   },
 });

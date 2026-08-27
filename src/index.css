@@ -107,6 +107,8 @@
 }
 
 .animate-border-beam {
+  will-change: transform;
+  transform: translateZ(0);
   animation: borderBeamSpin 5s linear infinite;
 }
 
@@ -120,6 +122,7 @@
 }
 
 .animate-pulse-glow {
+  will-change: opacity;
   animation: pulseGlow 3s ease-in-out infinite;
 }
 
@@ -129,7 +132,8 @@
     0 10px 30px -4px rgba(0, 0, 0, 0.06),
     0 4px 12px -2px rgba(0, 0, 0, 0.03),
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.6);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateZ(0);
 }
 
 .tactile-squircle:hover {
@@ -149,7 +153,8 @@
 }
 
 .animate-sheet-up {
-  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+  animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes fadeIn {
@@ -162,7 +167,8 @@
 }
 
 .animate-fade {
-  animation: fadeIn 0.2s ease-out forwards;
+  will-change: opacity;
+  animation: fadeIn 0.18s ease-out forwards;
 }
 
 /* Typing Bouncing Dot Animation */
