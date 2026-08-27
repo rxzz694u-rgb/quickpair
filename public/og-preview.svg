@@ -61,7 +61,7 @@
     
     <!-- Headline & Body -->
     <text x="48" y="170" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="44" font-weight="800" fill="#0B0B0F" letter-spacing="-1.2">Instant cross-device <tspan fill="#FF5B37">sharing.</tspan></text>
-    <text x="48" y="210" font-family="'Plus Jakarta Sans', 'Inter', sans-serif" font-size="18" font-weight="500" fill="#64748B">Beam text, links, notes, and files with zero cloud uploads.</text>
+    <text x="48" y="210" font-family="'Plus Jakarta Sans', 'Inter', sans-serif" font-size="18" font-weight="500" fill="#64748B">Send text, links, notes, and files with zero cloud uploads.</text>
     
     <!-- Feature Pill Badges -->
     <g transform="translate(48, 260)">

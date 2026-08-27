@@ -8,8 +8,8 @@ export const FAQSection: React.FC = () => {
 
   const faqs = [
     {
-      q: 'How does Simple.Savr work?',
-      a: 'Simple.Savr operates directly inside your web browser. When multiple devices open Simple.Savr on the same local Wi-Fi, they discover each other via browser-supported local peer channels (or WebRTC DataChannels). Content you type or drop is beamed across your local router without traveling through an external server.',
+      q: 'How does QuickPair work?',
+      a: 'QuickPair operates directly inside your web browser. When multiple devices open QuickPair, they discover each other instantly. Content you type or drop is transferred in real time with end-to-end encryption.',
     },
     {
       q: 'Do I need an account?',
@@ -17,7 +17,7 @@ export const FAQSection: React.FC = () => {
     },
     {
       q: 'Does it work on iPhone?',
-      a: 'Yes, seamlessly. Open Safari or Chrome on your iPhone, and you can instantly copy text or beam photos to/from your Mac, Windows PC, or iPad.',
+      a: 'Yes, seamlessly. Open Safari or Chrome on your iPhone, and you can instantly copy text or send photos to/from your Mac, Windows PC, or iPad.',
     },
     {
       q: 'Does it work on Android?',

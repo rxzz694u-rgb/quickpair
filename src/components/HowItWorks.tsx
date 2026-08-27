@@ -31,7 +31,7 @@ export const HowItWorks: React.FC = () => {
       description:
         'Everything you write, paste, or drop appears instantly on your other screen. Fast, encrypted, and completely private.',
       icon: Share2,
-      highlight: 'Instant beam',
+      highlight: 'Instant transfer',
     },
   ];
 

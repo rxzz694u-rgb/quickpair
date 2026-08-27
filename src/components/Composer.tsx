@@ -26,7 +26,7 @@ const PLACEHOLDERS = [
   'Type text, paste links, or drop files…',
   'Write a note to your phone or laptop…',
   'Paste a URL, code snippet, or address…',
-  'Drop photos, docs, or PDFs to beam…',
+  'Drop photos, docs, or PDFs to send…',
 ];
 
 export const Composer: React.FC<ComposerProps> = ({ onOpenDevices, peerCount }) => {
@@ -334,7 +334,7 @@ export const Composer: React.FC<ComposerProps> = ({ onOpenDevices, peerCount }) 
           {isDragOver && (
             <div className="absolute inset-0 z-20 bg-card/95 backdrop-blur-sm flex flex-col items-center justify-center gap-2 text-[#FF5B37] font-semibold text-sm pointer-events-none">
               <UploadCloud className="w-8 h-8 animate-bounce" />
-              <span>Drop file to beam instantly</span>
+              <span>Drop file to send instantly</span>
             </div>
           )}
 
@@ -471,11 +471,11 @@ export const Composer: React.FC<ComposerProps> = ({ onOpenDevices, peerCount }) 
               ) : sendState === 'sending' ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Beaming…</span>
+                  <span>Sending…</span>
                 </>
               ) : (
                 <>
-                  <span>Beam</span>
+                  <span>Send</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

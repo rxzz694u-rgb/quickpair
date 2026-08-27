@@ -170,7 +170,7 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
           </div>
           <p className="text-sm font-semibold text-text-primary">No items shared yet</p>
           <p className="text-xs text-text-muted max-w-xs mx-auto">
-            Open QuickPair on another phone or laptop to start beaming instantly.
+            Open QuickPair on another phone or laptop to start sharing instantly.
           </p>
         </div>
       ) : (

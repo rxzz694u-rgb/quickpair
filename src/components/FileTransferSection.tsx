@@ -167,7 +167,7 @@ export const FileTransferSection: React.FC = () => {
                 Drop files here
               </h3>
               <p className="text-xs font-mono text-zinc-400 max-w-xs mx-auto">
-                Drag any photo, video, PDF, or folder into this window to beam it across your network.
+                Drag any photo, video, PDF, or folder into this window to transfer it across your network.
               </p>
               <div className="inline-flex items-center gap-2 text-[11px] font-mono text-accent bg-accent/10 px-3 py-1 rounded-full border border-accent/20">
                 <Zap className="w-3.5 h-3.5" /> Direct RAM streaming · Up to 2GB/file

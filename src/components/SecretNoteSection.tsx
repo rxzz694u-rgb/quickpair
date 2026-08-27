@@ -149,7 +149,7 @@ export const SecretNoteSection: React.FC = () => {
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-cyber-rose hover:from-rose-400 hover:to-cyber-rose text-black font-semibold text-sm shadow-lg shadow-cyber-rose/20 transition-all flex items-center justify-center gap-2"
               >
                 <Lock className="w-4 h-4" />
-                <span>Create Secret Note (Encrypt & Beam)</span>
+                <span>Create Secret Note (Encrypt & Send)</span>
               </button>
             </div>
           )}
