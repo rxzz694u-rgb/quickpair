@@ -87,7 +87,7 @@ class PeerSyncEngine {
   private heartbeatInterval: number | null = null;
   private expirationInterval: number | null = null;
   private isOnline: boolean = true;
-  private originalTitle: string = 'QuickPair — Instant Local & Remote Device Sharing';
+  private originalTitle: string = 'QuickPair — Instant Device Sharing';
   private unreadCount: number = 0;
   private firestoreUnsubs: Unsubscribe[] = [];
   private lastTypingTime: number = 0;
