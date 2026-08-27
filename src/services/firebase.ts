@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { initializeFirestore, getFirestore, memoryLocalCache } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyD90hrbD1GhLRlFIKDamTASp9F-eDj_M6M',
@@ -28,6 +29,15 @@ export const db = (() => {
     });
   } catch {
     return getFirestore(app);
+  }
+})();
+
+// Initialize Firebase Storage for large media and files
+export const storage = (() => {
+  try {
+    return getStorage(app);
+  } catch {
+    return null;
   }
 })();
 

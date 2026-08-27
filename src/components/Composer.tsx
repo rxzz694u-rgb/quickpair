@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { sounds } from '../services/audio';
 import { peerSync } from '../services/peerSync';
+import { processFileForSync } from '../services/mediaHelper';
 
 interface ComposerProps {
   onOpenDevices: () => void;
@@ -206,7 +207,7 @@ export const Composer: React.FC<ComposerProps> = ({ onOpenDevices, peerCount }) 
     setSelectedFile(file);
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if ((!text.trim() && !selectedFile) || sendState !== 'idle') return;
 
     sounds.playPop();
@@ -214,45 +215,43 @@ export const Composer: React.FC<ComposerProps> = ({ onOpenDevices, peerCount }) 
     if (isOnline) setIsSyncing(true);
     peerSync.sendTyping(false);
 
-    setTimeout(() => {
-      if (selectedFile) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          peerSync.addItem({
-            type: 'file',
-            content: selectedFile.name,
-            title: selectedFile.name,
-            fileData: {
-              name: selectedFile.name,
-              size: selectedFile.size,
-              mimeType: selectedFile.type,
-              dataUrl: e.target?.result as string,
-            },
-          });
-        };
-        reader.readAsDataURL(selectedFile);
-      }
+    const fileToProcess = selectedFile;
+    const textToSend = text.trim();
 
-      if (text.trim()) {
-        const trimmed = text.trim();
-        const isUrl = /^https?:\/\/[^\s]+$/i.test(trimmed);
-        const isCode = trimmed.includes('\n') && (trimmed.includes('function') || trimmed.includes('const ') || trimmed.includes('{') || trimmed.includes('<'));
+    setText('');
+    setSelectedFile(null);
 
-        peerSync.addItem({
-          type: isUrl ? 'link' : isCode ? 'code' : 'text',
-          content: trimmed,
+    try {
+      if (fileToProcess) {
+        const fileData = await processFileForSync(fileToProcess, peerSync.getRoomCode());
+        await peerSync.addItem({
+          type: 'file',
+          content: fileToProcess.name,
+          title: fileToProcess.name,
+          fileData,
         });
       }
 
-      setText('');
-      setSelectedFile(null);
+      if (textToSend) {
+        const isUrl = /^https?:\/\/[^\s]+$/i.test(textToSend);
+        const isCode = textToSend.includes('\n') && (textToSend.includes('function') || textToSend.includes('const ') || textToSend.includes('{') || textToSend.includes('<'));
+
+        await peerSync.addItem({
+          type: isUrl ? 'link' : isCode ? 'code' : 'text',
+          content: textToSend,
+        });
+      }
+
       setSendState('sent');
       setIsSyncing(false);
 
       setTimeout(() => {
         setSendState('idle');
       }, 1200);
-    }, 100);
+    } catch {
+      setSendState('idle');
+      setIsSyncing(false);
+    }
   };
 
   const formatFileSize = (bytes: number) => {

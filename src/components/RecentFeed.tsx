@@ -26,15 +26,33 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
     setTimeout(() => setCopiedId(null), 1600);
   };
 
-  const handleDownload = (item: SharedItem) => {
+  const handleDownload = async (item: SharedItem) => {
     sounds.playSuccess();
-    if (item.fileData?.dataUrl) {
-      const a = document.createElement('a');
-      a.href = item.fileData.dataUrl;
-      a.download = item.fileData.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+    const downloadUrl = item.fileData?.dataUrl || item.fileData?.previewUrl;
+    if (downloadUrl) {
+      if (downloadUrl.startsWith('http')) {
+        try {
+          const res = await fetch(downloadUrl);
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = item.fileData?.name || 'download';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(blobUrl);
+        } catch {
+          window.open(downloadUrl, '_blank');
+        }
+      } else {
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = item.fileData?.name || 'file';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
     } else {
       const blob = new Blob([item.content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
@@ -109,6 +127,7 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
             const isImage = isImageFile(item);
             const fileName = item.fileData?.name || item.content;
             const fileSize = item.fileData?.size;
+            const imgSrc = item.fileData?.previewUrl || item.fileData?.dataUrl;
 
             return (
               <div
@@ -122,11 +141,15 @@ export const RecentFeed: React.FC<RecentFeedProps> = ({ items }) => {
                   {/* 1. FILE ITEM */}
                   {item.type === 'file' ? (
                     <div className="flex items-center gap-3">
-                      {isImage && item.fileData?.dataUrl ? (
+                      {isImage && imgSrc ? (
                         <img
-                          src={item.fileData.dataUrl}
+                          src={imgSrc}
                           alt={fileName}
-                          className="w-12 h-12 object-cover rounded-xl border border-border flex-shrink-0 bg-subtle shadow-xs"
+                          onClick={() => {
+                            const fullUrl = item.fileData?.dataUrl || imgSrc;
+                            if (fullUrl) window.open(fullUrl, '_blank');
+                          }}
+                          className="w-12 h-12 object-cover rounded-xl border border-border flex-shrink-0 bg-subtle shadow-xs cursor-pointer hover:opacity-90 transition-opacity"
                         />
                       ) : (
                         <div className="w-11 h-11 rounded-xl bg-subtle border border-border flex items-center justify-center flex-shrink-0 text-text-secondary shadow-xs">
