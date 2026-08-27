@@ -1,4 +1,4 @@
-// Real-time synchronization service for local Wi-Fi auto-discovery, Firestore Cloud E2EE, 5-day auto-expiring sessions, and multi-device mesh
+// Real-time synchronization service for Instant Zero-Delay Mesh, Firestore Cloud E2EE, 5-day auto-expiring sessions, and multi-device pairing
 
 import { EncryptedPayload, encryptRoomPacket, decryptRoomPacket } from './crypto';
 import { sounds } from './audio';
@@ -61,21 +61,9 @@ function cleanData<T extends object>(data: T): any {
   return JSON.parse(JSON.stringify(data));
 }
 
-// Deterministic 4-digit code based on public IP address for automatic Same Wi-Fi pairing
-function hashIpToRoomCode(ip: string): string {
-  let hash = 5381;
-  const str = ip.trim();
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash) + str.charCodeAt(i);
-  }
-  const positive = Math.abs(hash);
-  return (positive % 9000 + 1000).toString();
-}
-
 class PeerSyncEngine {
   private channel: BroadcastChannel | null = null;
-  private roomCode: string;
-  private isAutoWifiRoom: boolean = true;
+  private roomCode: string = 'main';
   private items: SharedItem[] = [];
   private offlineQueue: QueuedItem[] = [];
   private peers: Map<string, PeerInfo> = new Map();
@@ -91,6 +79,7 @@ class PeerSyncEngine {
   private originalTitle: string = 'QuickPair — Instant Local & Remote Device Sharing';
   private unreadCount: number = 0;
   private firestoreUnsubs: Unsubscribe[] = [];
+  private lastTypingSent: number = 0;
 
   constructor() {
     this.deviceId = 'dev_' + Math.random().toString(36).substring(2, 9);
@@ -98,18 +87,18 @@ class PeerSyncEngine {
     if (typeof window !== 'undefined') {
       this.isOnline = navigator.onLine;
 
+      // 1. Determine Room Code: URL param > saved preference > instant default 'main'
       const params = new URLSearchParams(window.location.search);
       const urlRoom = params.get('room');
       
       if (urlRoom && urlRoom.trim()) {
         this.roomCode = urlRoom.trim().toUpperCase();
-        this.isAutoWifiRoom = false;
       } else {
-        const savedWifiRoom = localStorage.getItem('quickpair_wifi_room');
-        this.roomCode = savedWifiRoom || generateRandomRoomCode();
-        this.isAutoWifiRoom = true;
+        const savedRoom = localStorage.getItem('quickpair_active_room');
+        this.roomCode = savedRoom && savedRoom.trim() ? savedRoom.trim().toUpperCase() : 'main';
       }
 
+      // 2. Identify Device Profile (iOS, Android, Mac, Windows)
       const ua = navigator.userAgent;
       if (/iPhone|iPod/i.test(ua)) {
         this.deviceType = 'mobile';
@@ -134,51 +123,18 @@ class PeerSyncEngine {
         this.deviceName = 'This Device';
       }
 
+      // 3. Initialize Services
       this.initStorage();
       this.initBroadcast();
       this.initFirestore();
       this.initNetworkListeners();
-      this.initFocusListener();
+      this.initFocusAndVisibilityListeners();
       this.initExpirationWatcher();
-
-      // If user did not specify custom ?room= in URL, automatically discover Same Wi-Fi room
-      if (this.isAutoWifiRoom) {
-        this.detectSameWifiRoom();
-      }
+      this.initUnloadListener();
     } else {
-      this.roomCode = '7492';
+      this.roomCode = 'main';
       this.deviceType = 'desktop';
       this.deviceName = 'This Device';
-    }
-  }
-
-  // Detect public IP to automatically pair devices on the same Wi-Fi router
-  private async detectSameWifiRoom() {
-    if (typeof window === 'undefined' || !navigator.onLine) return;
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-      const res = await fetch('https://api.ipify.org?format=json', {
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.ip) {
-          const wifiRoom = hashIpToRoomCode(data.ip);
-          localStorage.setItem('quickpair_wifi_room', wifiRoom);
-
-          // If still on auto-room, switch to the detected Wi-Fi room
-          if (this.isAutoWifiRoom && this.roomCode !== wifiRoom) {
-            this.setRoom(wifiRoom, false);
-          }
-        }
-      }
-    } catch {
-      // Fallback silently if offline or blocked
     }
   }
 
@@ -222,10 +178,8 @@ class PeerSyncEngine {
       this.isOnline = true;
       this.notifyNetwork();
       this.flushOfflineQueue();
+      this.initFirestore(); // Re-establish Firestore stream immediately
       this.sendHeartbeat();
-      if (this.isAutoWifiRoom) {
-        this.detectSameWifiRoom();
-      }
     });
 
     window.addEventListener('offline', () => {
@@ -234,13 +188,40 @@ class PeerSyncEngine {
     });
   }
 
-  private initFocusListener() {
+  private initFocusAndVisibilityListeners() {
     if (typeof window === 'undefined') return;
 
-    window.addEventListener('focus', () => {
-      this.unreadCount = 0;
-      document.title = this.originalTitle;
-    });
+    const handleActiveState = () => {
+      if (document.visibilityState === 'visible') {
+        this.unreadCount = 0;
+        document.title = this.originalTitle;
+        this.sendHeartbeat();
+        // If listeners fell asleep on mobile backgrounding, re-verify
+        if (this.firestoreUnsubs.length === 0) {
+          this.initFirestore();
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleActiveState);
+    document.addEventListener('visibilitychange', handleActiveState);
+  }
+
+  // Clean peer presence on tab close/unload
+  private initUnloadListener() {
+    if (typeof window === 'undefined') return;
+
+    const cleanupPeer = () => {
+      if (isFirebaseConfigured && this.isOnline) {
+        try {
+          const peerDocRef = doc(db, 'sessions', this.roomCode, 'peers', this.deviceId);
+          deleteDoc(peerDocRef).catch(() => {});
+        } catch {}
+      }
+    };
+
+    window.addEventListener('beforeunload', cleanupPeer);
+    window.addEventListener('pagehide', cleanupPeer);
   }
 
   private triggerIncomingNotification(senderName: string, itemType: string) {
@@ -298,7 +279,7 @@ class PeerSyncEngine {
     this.firestoreUnsubs = [];
   }
 
-  // Cloud Firestore synchronization under /sessions/{sessionId}/
+  // Real-Time Cloud Firestore Sync under /sessions/{sessionId}/
   private initFirestore() {
     if (typeof window === 'undefined' || !isFirebaseConfigured) return;
 
@@ -307,38 +288,24 @@ class PeerSyncEngine {
     try {
       const sessionId = this.roomCode;
 
-      // 1. Listen to items at /sessions/{sessionId}/items/
+      // 1. Instant Real-Time Items Listener: /sessions/{sessionId}/items/
       const itemsRef = collection(db, 'sessions', sessionId, 'items');
 
       const unsubItems = onSnapshot(
         itemsRef,
-        async (snapshot) => {
+        (snapshot) => {
           let hasNewIncoming = false;
           let incomingSender = '';
           let incomingType = 'item';
 
           const remoteItems: SharedItem[] = [];
 
-          for (const docSnap of snapshot.docs) {
+          snapshot.docs.forEach((docSnap) => {
             const data = docSnap.data();
-            if (!data) continue;
+            if (!data) return;
 
-            if (data.encryptedPacket) {
-              try {
-                const decryptedStr = await decryptRoomPacket(data.encryptedPacket, this.roomCode);
-                const decryptedItem: SharedItem = JSON.parse(decryptedStr);
-                remoteItems.push(decryptedItem);
-
-                if (decryptedItem.senderDevice !== this.deviceName && !this.items.some((i) => i.id === decryptedItem.id)) {
-                  hasNewIncoming = true;
-                  incomingSender = decryptedItem.senderDevice;
-                  incomingType = decryptedItem.type;
-                }
-              } catch {
-                // Ignore packets with mismatching room keys
-              }
-            } else if (data.id && data.content !== undefined) {
-              const plainItem: SharedItem = {
+            if (data.id && data.content !== undefined) {
+              const itemObj: SharedItem = {
                 id: data.id,
                 type: data.type || 'text',
                 content: data.content,
@@ -352,43 +319,42 @@ class PeerSyncEngine {
                 isQueued: false,
                 isEncrypted: Boolean(data.isEncrypted),
               };
-              remoteItems.push(plainItem);
+              remoteItems.push(itemObj);
 
-              if (plainItem.senderDevice !== this.deviceName && !this.items.some((i) => i.id === plainItem.id)) {
+              if (itemObj.senderDevice !== this.deviceName && !this.items.some((i) => i.id === itemObj.id)) {
                 hasNewIncoming = true;
-                incomingSender = plainItem.senderDevice;
-                incomingType = plainItem.type;
+                incomingSender = itemObj.senderDevice;
+                incomingType = itemObj.type || 'item';
               }
             }
-          }
+          });
 
           // Sort descending by timestamp
           remoteItems.sort((a, b) => b.timestamp - a.timestamp);
 
-          if (snapshot.docs.length > 0 || this.items.length > 0) {
-            const localQueued = this.items.filter((i) => i.isQueued);
-            const combinedMap = new Map<string, SharedItem>();
+          // Preserve optimistic local items while merging remote
+          const localQueued = this.items.filter((i) => i.isQueued);
+          const combinedMap = new Map<string, SharedItem>();
 
-            localQueued.forEach((item) => combinedMap.set(item.id, item));
-            remoteItems.forEach((item) => combinedMap.set(item.id, item));
+          localQueued.forEach((item) => combinedMap.set(item.id, item));
+          remoteItems.forEach((item) => combinedMap.set(item.id, item));
 
-            this.items = Array.from(combinedMap.values()).sort((a, b) => b.timestamp - a.timestamp);
-            this.pruneExpiredItems();
-            this.saveStorage();
-            this.notify();
+          this.items = Array.from(combinedMap.values()).sort((a, b) => b.timestamp - a.timestamp);
+          this.pruneExpiredItems();
+          this.saveStorage();
+          this.notify();
 
-            if (hasNewIncoming) {
-              this.triggerIncomingNotification(incomingSender, incomingType);
-            }
+          if (hasNewIncoming) {
+            this.triggerIncomingNotification(incomingSender, incomingType);
           }
         },
         (error) => {
-          console.warn('[QuickPair] Firestore items listener notice:', error.message);
+          console.warn('[QuickPair] Firestore items stream notice:', error.message);
         }
       );
       this.firestoreUnsubs.push(unsubItems);
 
-      // 2. Listen to peer presence at /sessions/{sessionId}/peers/
+      // 2. Real-Time Peer Presence Listener: /sessions/{sessionId}/peers/
       const peersRef = collection(db, 'sessions', sessionId, 'peers');
       const unsubPeers = onSnapshot(
         peersRef,
@@ -397,13 +363,13 @@ class PeerSyncEngine {
           snapshot.docs.forEach((docSnap) => {
             const peer = docSnap.data() as PeerInfo;
             if (peer && peer.id && peer.id !== this.deviceId) {
-              if (now - (peer.lastSeen || 0) < 12000) {
+              if (now - (peer.lastSeen || 0) < 8000) {
                 this.peers.set(peer.id, {
                   id: peer.id,
-                  name: peer.name || 'Nearby Device',
+                  name: peer.name || 'Connected Device',
                   type: peer.type || 'desktop',
                   lastSeen: peer.lastSeen,
-                  networkType: peer.networkType || (this.isAutoWifiRoom ? 'wifi' : 'remote'),
+                  networkType: 'wifi',
                 });
               } else {
                 this.peers.delete(peer.id);
@@ -413,12 +379,12 @@ class PeerSyncEngine {
           this.notify();
         },
         (error) => {
-          console.warn('[QuickPair] Firestore peers listener notice:', error.message);
+          console.warn('[QuickPair] Firestore peers stream notice:', error.message);
         }
       );
       this.firestoreUnsubs.push(unsubPeers);
 
-      // 3. Listen to typing indicators at /sessions/{sessionId}/typing/
+      // 3. Real-Time Typing Listener: /sessions/{sessionId}/typing/
       const typingRef = collection(db, 'sessions', sessionId, 'typing');
       const unsubTyping = onSnapshot(
         typingRef,
@@ -427,19 +393,24 @@ class PeerSyncEngine {
           snapshot.docs.forEach((docSnap) => {
             if (docSnap.id !== this.deviceId) {
               const data = docSnap.data();
-              if (data && now - (data.timestamp || 0) < 5000) {
+              if (data && now - (data.timestamp || 0) < 4000) {
                 this.typingListeners.forEach((cb) => cb(data.senderDevice, data.isTyping, data.textPreview));
+              } else if (data && !data.isTyping) {
+                this.typingListeners.forEach((cb) => cb(data.senderDevice, false));
               }
             }
           });
         },
         (error) => {
-          console.warn('[QuickPair] Firestore typing listener notice:', error.message);
+          console.warn('[QuickPair] Firestore typing stream notice:', error.message);
         }
       );
       this.firestoreUnsubs.push(unsubTyping);
+
+      // Send immediate initial heartbeat
+      this.sendHeartbeat();
     } catch (err) {
-      console.warn('[QuickPair] Firestore initialization notice:', err);
+      console.warn('[QuickPair] Firestore stream initialization notice:', err);
     }
   }
 
@@ -474,28 +445,6 @@ class PeerSyncEngine {
               this.pruneExpiredItems();
               this.saveStorage();
               this.notify();
-            }
-            break;
-
-          case 'ADD_ITEM_E2EE':
-            if (msg.encryptedPacket) {
-              try {
-                const decryptedStr = await decryptRoomPacket(msg.encryptedPacket, this.roomCode);
-                const decryptedItem: SharedItem = JSON.parse(decryptedStr);
-
-                if (!this.items.some((i) => i.id === decryptedItem.id)) {
-                  this.items = [decryptedItem, ...this.items];
-                  this.pruneExpiredItems();
-                  this.saveStorage();
-                  this.notify();
-
-                  if (decryptedItem.senderDevice !== this.deviceName) {
-                    this.triggerIncomingNotification(decryptedItem.senderDevice, decryptedItem.type);
-                  }
-                }
-              } catch (e) {
-                // Silently skip corrupted/wrong-key packet
-              }
             }
             break;
 
@@ -536,20 +485,16 @@ class PeerSyncEngine {
         }
       };
 
-      // Send initial heartbeat
-      this.sendHeartbeat();
-
       if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = window.setInterval(() => {
         this.sendHeartbeat();
         this.cleanupDeadPeers();
-      }, 3000);
+      }, 2500);
     } catch {
-      // BroadcastChannel unavailable
+      // BroadcastChannel fallback
     }
   }
 
-  // Flush offline queue when connection restored
   public flushOfflineQueue() {
     if (!this.isOnline || this.offlineQueue.length === 0) return;
 
@@ -566,11 +511,17 @@ class PeerSyncEngine {
   }
 
   public setRoom(newRoomCode: string, updateUrl: boolean = true) {
-    const formatted = newRoomCode.trim().toUpperCase() || generateRandomRoomCode();
+    const formatted = newRoomCode.trim().toUpperCase() || 'MAIN';
     if (formatted === this.roomCode) return;
 
+    // Clean up current presence in old room
+    if (isFirebaseConfigured && this.isOnline) {
+      const oldPeerDoc = doc(db, 'sessions', this.roomCode, 'peers', this.deviceId);
+      deleteDoc(oldPeerDoc).catch(() => {});
+    }
+
     this.roomCode = formatted;
-    this.isAutoWifiRoom = false;
+    localStorage.setItem('quickpair_active_room', formatted);
     this.peers.clear();
     this.initStorage();
     this.initBroadcast();
@@ -578,7 +529,11 @@ class PeerSyncEngine {
 
     if (updateUrl && typeof window !== 'undefined' && window.history) {
       const url = new URL(window.location.href);
-      url.searchParams.set('room', this.roomCode);
+      if (this.roomCode === 'MAIN') {
+        url.searchParams.delete('room');
+      } else {
+        url.searchParams.set('room', this.roomCode);
+      }
       window.history.replaceState({}, '', url.toString());
     }
 
@@ -605,7 +560,7 @@ class PeerSyncEngine {
   }
 
   private sendHeartbeat() {
-    // 1. BroadcastChannel local heartbeat
+    // 1. BroadcastChannel heartbeat
     if (this.channel) {
       this.channel.postMessage({
         type: 'HEARTBEAT',
@@ -613,12 +568,12 @@ class PeerSyncEngine {
           id: this.deviceId,
           name: this.deviceName,
           type: this.deviceType,
-          networkType: this.isAutoWifiRoom ? 'wifi' : 'remote',
+          networkType: 'wifi',
         },
       });
     }
 
-    // 2. Firestore peer presence at /sessions/{sessionId}/peers/{deviceId}
+    // 2. Firestore peer presence under /sessions/{sessionId}/peers/{deviceId}
     if (typeof window !== 'undefined' && isFirebaseConfigured && this.isOnline) {
       const sessionId = this.roomCode;
       const peerDocRef = doc(db, 'sessions', sessionId, 'peers', this.deviceId);
@@ -629,7 +584,7 @@ class PeerSyncEngine {
           name: this.deviceName,
           type: this.deviceType,
           lastSeen: Date.now(),
-          networkType: this.isAutoWifiRoom ? 'wifi' : 'remote',
+          networkType: 'wifi',
         }),
         { merge: true }
       ).catch(() => {});
@@ -640,7 +595,7 @@ class PeerSyncEngine {
     const now = Date.now();
     let changed = false;
     for (const [id, peer] of this.peers.entries()) {
-      if (now - peer.lastSeen > 12000) {
+      if (now - peer.lastSeen > 8000) {
         this.peers.delete(id);
         changed = true;
       }
@@ -684,6 +639,11 @@ class PeerSyncEngine {
   }
 
   public sendTyping(isTyping: boolean, textPreview?: string) {
+    const now = Date.now();
+    // Throttle typing heartbeats to max once per 600ms unless stopped
+    if (isTyping && now - this.lastTypingSent < 600) return;
+    this.lastTypingSent = now;
+
     if (this.channel) {
       this.channel.postMessage({
         type: 'TYPING_INDICATOR',
@@ -702,7 +662,7 @@ class PeerSyncEngine {
           senderDevice: this.deviceName,
           isTyping,
           textPreview: textPreview || '',
-          timestamp: Date.now(),
+          timestamp: now,
         })
       ).catch(() => {});
     }
@@ -712,7 +672,7 @@ class PeerSyncEngine {
     const now = Date.now();
     const expiresAt = now + FIVE_DAYS_MS;
 
-    // If device is offline and not flushing, add to offline queue
+    // Offline queue handling
     if (!this.isOnline && !forceOnlineSend) {
       this.offlineQueue = [...this.offlineQueue, item];
       this.saveStorage();
@@ -744,27 +704,20 @@ class PeerSyncEngine {
       isEncrypted: true,
     };
 
-    // Remove any temporary queued entry if this is a flush
+    // Instant optimistic update on sender device (0ms delay)
     this.items = [newItem, ...this.items.filter((i) => !i.isQueued || i.content !== item.content)];
     this.saveStorage();
+    this.notify();
 
-    // Broadcast with End-to-End Encryption (AES-GCM 256-bit) via BroadcastChannel
+    // BroadcastChannel local broadcast
     if (this.channel) {
-      try {
-        const encryptedPacket = await encryptRoomPacket(JSON.stringify(newItem), this.roomCode);
-        this.channel.postMessage({
-          type: 'ADD_ITEM_E2EE',
-          encryptedPacket,
-        });
-      } catch {
-        this.channel.postMessage({
-          type: 'ADD_ITEM',
-          item: newItem,
-        });
-      }
+      this.channel.postMessage({
+        type: 'ADD_ITEM',
+        item: newItem,
+      });
     }
 
-    // Write to Cloud Firestore under /sessions/{sessionId}/items/{itemId}
+    // Cloud Firestore instant write under /sessions/{sessionId}/items/{itemId}
     if (typeof window !== 'undefined' && isFirebaseConfigured && this.isOnline) {
       const sessionId = this.roomCode;
       const itemDocRef = doc(db, 'sessions', sessionId, 'items', newItem.id);
@@ -789,7 +742,6 @@ class PeerSyncEngine {
       });
     }
 
-    this.notify();
     return newItem;
   }
 
